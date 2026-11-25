@@ -5,7 +5,7 @@
   ?quote=<id> / ?invoice=<id> opens one for editing.
   Locals: job, stage, values { quoted, agreed, invoiced }, costs (optional: { purchases, labour, costs { materials, labour { employees, bought, total }, total }, margin, kashflow }), match { project, quotes[] (state converted: invoice { number, id, onJob }; deleted: KashFlow deleted it), invoices[], extras { quotes[], invoices[] (fromQuote: the quote it was converted from) } }, next,
           stageLabels, quoteStatuses, quoteStatusLabels, canEdit, canCreate { project, quotes: { id: bool } },
-          editQuote, editInvoice, crumbs, title, oneDriveOn (OneDrive job folders set up: offer Find folder)
+          editQuote, editInvoice, crumbs, title, oneDriveOn (OneDrive job folders set up: offer Find / Sync folder)
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -100,17 +100,19 @@
         <% if (job.oneDriveFolderUrl || job.oneDriveFolderId || locals.oneDriveOn) { %>
         <div>
           <dt class="<%= label %>">OneDrive folder</dt>
-          <dd>
+          <dd class="flex flex-wrap items-center gap-2">
             <% if (job.oneDriveFolderUrl) { %>
               <a href="<%= job.oneDriveFolderUrl %>" target="_blank" rel="noopener" class="text-green-700 dark:text-green-400 hover:underline" title="<%= job.oneDriveFolderPath || '' %>"><i class="bi bi-folder2-open" aria-hidden="true"></i> OneDrive folder</a>
             <% } else if (job.oneDriveFolderId) { %>
               <span title="<%= job.oneDriveFolderPath || '' %>"><%= job.oneDriveFolderPath || 'Known, no link' %></span>
-            <% } else if (canEdit) { %>
+            <% } else if (!(canEdit && locals.oneDriveOn)) { %>None yet<% } %>
+            <% if (canEdit && locals.oneDriveOn) { %>
               <form method="POST" action="/job-register/<%= job.uuid %>/onedrive-folder" class="inline">
                 <%- include('../partials/csrfHidden') %>
-                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm"><i class="bi bi-search" aria-hidden="true"></i> Find folder</button>
+                <% const hasFolder = Boolean(job.oneDriveFolderId); %>
+                <button type="submit" title="<%= hasFolder ? 'Checks the folder is still there, moves or renames it to where this job belongs, and refreshes the link.' : 'Looks for the folder of this job by its project and quote numbers, or makes one, and keeps it.' %>" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm"><i class="bi <%= hasFolder ? 'bi-arrow-repeat' : 'bi-search' %>" aria-hidden="true"></i> <%= hasFolder ? 'Sync folder' : 'Find folder' %></button>
               </form>
-            <% } else { %>None yet<% } %>
+            <% } %>
           </dd>
         </div>
         <% } %>

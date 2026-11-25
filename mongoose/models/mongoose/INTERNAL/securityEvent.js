@@ -46,7 +46,9 @@ const EVENT_TYPES = [
   // OneDrive job folders (oneDriveFolderService, jobRegisterLifecycleService)
   'onedrive_folder_created',
   'onedrive_folder_moved',
+  'onedrive_folder_renamed',
   'onedrive_folder_linked',
+  'onedrive_folders_bulk_linked',
   'onedrive_folder_failed',
   'onedrive_connection_tested',
 ];

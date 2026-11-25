@@ -297,7 +297,7 @@ export const GROUPS = [
     id: 'onedrive',
     label: 'OneDrive (job folders)',
     icon: 'bi-folder-symlink-fill',
-    description: 'Creates and moves job folders in one Microsoft 365 user\'s OneDrive: a quote gets "<quote no> <site>" in the quotes folder for its year, a won job is moved to the live jobs folder for its year and renamed "<job no> <site>", and a completed job goes into Completed Jobs inside that live jobs folder. Uses its own Entra app registration with the Microsoft Graph application permission Files.ReadWrite.All, granted admin consent. Test connection only reads the top folder.',
+    description: 'Creates and moves job folders in one Microsoft 365 user\'s OneDrive: a quote gets "<quote no> <site>" in the quotes folder for its year, a won job is moved to the live jobs folder for its year and renamed "<job no> <site>", and a completed job goes into Completed Jobs inside that live jobs folder. A cancelled job (or one whose quotes were all lost) goes into Cancelled inside the year folder it is in, a job moved back a stage has its folder moved back, and a folder is renamed when the job\'s site or number changes. Uses its own Entra app registration with the Microsoft Graph application permission Files.ReadWrite.All, granted admin consent. Test connection only reads the top folder.',
     test: 'onedrive',
     // The service caches an access token for the credentials it last used.
     afterSave: 'onedrive',
@@ -311,6 +311,7 @@ export const GROUPS = [
       { key: 'ONEDRIVE_QUOTES_FOLDER', label: 'Quotes folder name', type: 'text', help: 'Name of each year\'s quotes folder; {year} is replaced by the calendar year of the quote date. Blank = "3. QUOTES {year}".' },
       { key: 'ONEDRIVE_LIVE_FOLDER', label: 'Live jobs folder name', type: 'text', help: 'Name of each year\'s live jobs folder; {year} is the calendar year the quote was won. Blank = "1.1 LIVE JOBS {year}".' },
       { key: 'ONEDRIVE_COMPLETED_FOLDER', label: 'Completed folder name', type: 'text', help: 'Folder inside a live jobs folder that completed jobs move to. Blank = "Completed Jobs".' },
+      { key: 'ONEDRIVE_CANCELLED_FOLDER', label: 'Cancelled folder name', type: 'text', help: 'Folder inside each quotes or live jobs year folder that a cancelled job (or one whose quotes were all lost) moves to. Blank = "Cancelled".' },
     ],
   },
   {

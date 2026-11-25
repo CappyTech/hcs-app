@@ -47,6 +47,7 @@ async function renderRegister(req, res, filters, fill = null) {
     contracts: await jobRegister.contractChoices(),
     customers: await jobRegister.customerChoices(),
     crumbs: overviewEngine.breadcrumbs(req, 'projects'),
+    oneDriveOn: oneDrive.isConfigured(),
     form: fill ? jobRegister.fillNext(fill, data.next) : {},
   });
 }
@@ -345,22 +346,62 @@ export const postKashflowProject = async (req, res, next) => {
 
 // ── OneDrive folder ─────────────────────────────────────────────────────
 
-/** POST /job-register/:uuid/onedrive-folder: find the job's folder in OneDrive and keep it. */
-export const postFindFolder = async (req, res, next) => {
+const ONEDRIVE_OFF = 'OneDrive job folders are switched off or not set up (Admin → Config → OneDrive).';
+
+/** What Sync folder did, in a sentence. Pure. */
+export function syncFlash(r) {
+  const f = r.folder;
+  const where = f.path || f.name;
+  if (f.created) return `Made the OneDrive folder: ${where}.`;
+  const did = [];
+  if (r.linked) did.push('Found');
+  if (f.moved) did.push('moved');
+  else if (f.renamed) did.push('renamed');
+  if (!did.length) return `The OneDrive folder is already where it should be: ${where}.${f.note ? ` ${f.note}` : ''}`;
+  const verb = did.join(' and ');
+  const text = `${verb[0].toUpperCase()}${verb.slice(1)} the OneDrive folder: ${where}.`;
+  return f.note ? `${text} ${f.note}` : text;
+}
+
+/**
+ * POST /job-register/:uuid/onedrive-folder: Sync folder. Find the job's
+ * folder (or make it), put it where the job's stage says and keep it.
+ */
+export const postSyncFolder = async (req, res, next) => {
   const back = jobUrl(req.params.uuid);
   try {
-    const r = await lifecycle.findFolder(req.params.uuid);
-    if (r.skipped) req.flash('error', 'OneDrive job folders are switched off or not set up (Admin → Config → OneDrive).');
-    else if (r.already) req.flash('success', 'This job already has its OneDrive folder.');
-    else if (r.folder) req.flash('success', `Found the OneDrive folder: ${r.folder.path || r.folder.name}.`);
-    else req.flash('error', "No OneDrive folder was found for this job's project or quote number.");
+    const r = await lifecycle.syncFolder(req.params.uuid);
+    if (r.skipped) req.flash('error', ONEDRIVE_OFF);
+    else if (r.folder) req.flash('success', syncFlash(r));
+    else if (r.cancelled) req.flash('error', 'No OneDrive folder was found for this cancelled job, and none is made for a cancelled job.');
+    else req.flash('error', 'No OneDrive folder was found for this job, and it has no quote or project number to make one with.');
     res.redirect(back);
   } catch (err) {
     if (err.status === 404) return backOnError(req, res, next, err, back);
-    logger.warn(`[jobRegisterController] Find folder for ${req.params.uuid} failed: ${err.message}`);
-    req.flash('error', `The OneDrive folder couldn't be found: ${err.message}`);
+    logger.warn(`[jobRegisterController] Sync folder for ${req.params.uuid} failed: ${err.message}`);
+    req.flash('error', `The OneDrive folder couldn't be synced: ${err.message}`);
     res.redirect(back);
   }
+};
+
+/**
+ * POST /job-register/onedrive-folders: link every job with no folder to its
+ * folder in OneDrive (nothing is created or moved). Admin only.
+ */
+export const postLinkFolders = async (req, res) => {
+  try {
+    const r = await lifecycle.linkAllFolders();
+    if (r.skipped) req.flash('error', ONEDRIVE_OFF);
+    else if (!r.checked) req.flash('success', 'Every job already has its OneDrive folder.');
+    else {
+      const s = (n) => (n === 1 ? '' : 's');
+      req.flash('success', `Linked ${r.linked} of ${r.checked} job${s(r.checked)} without a folder to their OneDrive folders.${r.notFound ? ` ${r.notFound} had no folder in OneDrive; Sync folder on the job page makes one.` : ''}`);
+    }
+  } catch (err) {
+    logger.warn(`[jobRegisterController] Link OneDrive folders failed: ${err.message}`);
+    req.flash('error', `The OneDrive folders couldn't be linked: ${err.message}`);
+  }
+  res.redirect('/job-register');
 };
 
 function flashCreated(req, label, r) {
@@ -368,7 +409,7 @@ function flashCreated(req, label, r) {
 }
 
 export default {
-  getKashflowQuote, postKashflowQuote, postKashflowProject, postFindFolder, getLinkClients, postLinkClients, postLinkFromKashflow,
+  getKashflowQuote, postKashflowQuote, postKashflowProject, postSyncFolder, postLinkFolders, getLinkClients, postLinkClients, postLinkFromKashflow,
   getRegister, postFillNext, postFillNextEdit, postCreate, getShow, getEdit, postUpdate,
   postAddQuote, postUpdateQuote, postRemoveQuote, postAddInvoice, postUpdateInvoice, postRemoveInvoice, postAddFromKashflow, readFilters,
 };

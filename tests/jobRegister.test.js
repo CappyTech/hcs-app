@@ -509,7 +509,7 @@ describe('Lifecycle hooks', () => {
     assert.deepEqual(stageHooks(quoted, { ...quoted, projectNumber: 2, completed: true }), ['onJobWon', 'onJobCompleted']);
     assert.deepEqual(stageHooks(null, { projectNumber: 2 }), ['onJobWon'], 'a job entered already won');
     assert.deepEqual(stageHooks({ projectNumber: 2, completed: true }, { projectNumber: 2, completed: true, invoices: [{ number: 1 }] }), [], 'completed → invoiced is still done');
-    assert.deepEqual(stageHooks(quoted, { ...quoted, cancelled: true }), []);
+    assert.deepEqual(stageHooks(quoted, { ...quoted, cancelled: true }), ['onFolderChange'], 'cancelled: no KashFlow hook, only the folder moves');
   });
 
   it("log and never stop a save when one fails", async () => {

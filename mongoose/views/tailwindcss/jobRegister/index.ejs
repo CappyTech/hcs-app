@@ -70,6 +70,12 @@
       <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
         <a href="/job-register/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Import workbook</a>
       <% } %>
+      <% if (typeof isAdmin !== 'undefined' && isAdmin && locals.oneDriveOn) { %>
+        <form method="POST" action="/job-register/onedrive-folders" class="inline">
+          <%- include('../partials/csrfHidden') %>
+          <button type="submit" class="<%= secondaryBtn %> whitespace-nowrap" title="Links every job without a OneDrive folder to its folder there. Nothing in OneDrive is created or moved."><i class="bi bi-folder-symlink" aria-hidden="true"></i> Link OneDrive folders</button>
+        </form>
+      <% } %>
       <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a job</a>
     </div>
   </div>

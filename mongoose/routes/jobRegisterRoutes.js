@@ -21,6 +21,9 @@ router.post(
 router.get('/job-register/link-clients', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.getLinkClients);
 router.post('/job-register/link-clients', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postLinkClients);
 router.post('/job-register/link-clients/kashflow', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postLinkFromKashflow);
+// Link every job without one to its OneDrive folder. Admin only (a bulk
+// write). Before /:uuid.
+router.post('/job-register/onedrive-folders', authService.ensureRole('admin'), ctrl.postLinkFolders);
 // Import the Job Reg workbook: upload, check, import. Admin only (a bulk
 // write). Before /:uuid, which would otherwise take "import" as an entry.
 router.get('/job-register/import', authService.ensureRole('admin'), importCtrl.getJobRegisterUpload);
@@ -48,8 +51,9 @@ const edit = authService.ensureGroup('commercial', 'edit', 'admin');
 router.get('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.getKashflowQuote);
 router.post('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.postKashflowQuote);
 router.post('/job-register/:uuid/kashflow-project', edit, ctrl.postKashflowProject);
-// Find the job's OneDrive folder and keep it on the job
-router.post('/job-register/:uuid/onedrive-folder', edit, ctrl.postFindFolder);
+// Sync folder: find (or make) the job's OneDrive folder, put it where its
+// stage says and keep it on the job
+router.post('/job-register/:uuid/onedrive-folder', edit, ctrl.postSyncFolder);
 // A job's quotes (variations) and invoices (stage payments)
 router.post('/job-register/:uuid/quotes', edit, ctrl.postAddQuote);
 router.post('/job-register/:uuid/quotes/:id', edit, ctrl.postUpdateQuote);
