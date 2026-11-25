@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.1] - 2026-11-25
+
+### Changed
+- **Document details page redesigned** (`/paperless/ocr/:id`). The header now shows the document's status, its KashFlow purchase number and all the actions (Data entry, Purchase Draft, Match Purchase, Open in Paperless) together. Warnings (deleted in Paperless, not for KashFlow, missing or out-of-sync KashFlow link, possible re-upload) sit together under the header. The OCR text and custom fields fill the main column. A side column holds the KashFlow link, document details with tags shown as chips, and the ingest record. Unlink now sits under "Wrong purchase?".
+
+### Fixed
+- **The linked KashFlow box on the document details page is no longer bright pale green in dark mode.**
+- **Remove record on a deleted document asks for confirmation through `data-confirm`.** The inline `onsubmit` handler it used before is blocked by the CSP.
+
 ## [6.149.0] - 2026-11-25
 
 ### Added

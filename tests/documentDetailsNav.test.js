@@ -41,17 +41,25 @@ describe('document details: way back to the queue', () => {
       slimDateTime: () => '', formatCurrency: () => '', csrfToken: 't',
       doc: { paperlessId: 1, tags: [], customFields: [], created: new Date('2026-09-24T09:00:00Z') },
     });
-    assert.match(html, /Created:<\/span> 24\/09\/2026, 10:00:00/);
+    assert.match(html, /data-created>24\/09\/2026, 10:00:00</);
   });
 });
 
 describe('readability and back links on linked documents', () => {
-  it('the Unlink wording keeps the green box dark greens, not dark-mode greys (1.41:1 before)', () => {
+  it('the Unlink wording stays green on the green box in both themes, never grey (1.41:1 before)', () => {
     const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/read.ejs'), 'utf8');
     const form = view.slice(view.indexOf('data-unlink-form'), view.indexOf('</form>', view.indexOf('data-unlink-form')));
-    assert.match(form, /<label class="inline-flex items-center gap-1 text-green-900">/);
-    assert.match(form, /<span class="text-green-800 w-full">Removes the link/);
-    assert.ok(!/dark:text-gray|text-gray-[34]00/.test(form), 'no light grey on the light green box');
+    assert.match(form, /<label class="[^"]*text-green-900 dark:text-green-200">/);
+    assert.match(form, /<span class="text-green-800 dark:text-green-300 w-full">Removes the link/);
+    assert.ok(!/dark:text-gray|text-gray-[34]00/.test(form), 'no grey on the green box');
+    // the green box itself has a dark variant now, so dark-mode greens sit on dark green
+    assert.match(view, /border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900\/20/);
+  });
+
+  it('keeps no inline event handlers (CSP)', () => {
+    const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/read.ejs'), 'utf8');
+    assert.ok(!/\son[a-z]+=/.test(view), 'use data-confirm, not onsubmit');
+    assert.match(view, /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/remove"[\s\S]*?data-confirm=/);
   });
 
   it("the KashFlow draft only links back to a queue the document is in", async () => {
