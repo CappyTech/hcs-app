@@ -573,6 +573,17 @@ if (root && form && Object.keys(inputs).length) {
 
   fillLinesBtn?.addEventListener('click', fillLines);
 
+  // Clear entry: empty every box (header and lines) to type the invoice afresh.
+  // Nothing is stored until Save, and blank lines are dropped then.
+  form.querySelector('[data-clear-entry]')?.addEventListener('click', () => {
+    for (const k of Object.keys(picks)) delete picks[k];
+    form.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button])').forEach((input) => {
+      if (input.disabled || input.readOnly || input.value === '') return;
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
   if (toggle) {
     const sync = () => {
       toggle.setAttribute('aria-pressed', String(showMarks));

@@ -525,6 +525,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
             <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
               <button type="submit" name="action" value="save" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
               <button type="submit" name="action" value="addLine" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-plus-lg"></i> Add line</button>
+              <button type="button" data-clear-entry title="Empty every box, header and lines. Nothing changes until you save." class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-900 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium transition shadow-sm"><i class="bi bi-eraser"></i> Clear entry</button>
               <% if (state === 'awaiting_entry') { %>
                 <button type="submit" name="action" value="complete" class="ml-auto text-sm bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition"><i class="bi bi-check2"></i> Complete entry</button>
               <% } %>
