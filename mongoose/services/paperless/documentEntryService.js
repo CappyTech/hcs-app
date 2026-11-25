@@ -589,12 +589,98 @@ const NOTIFICATION_WORDS = {
 };
 const word = (table, v) => table[v == null ? 'null' : v] ?? String(v);
 
+// ── KashFlow sync changes to the linked purchase ──────────────────────
+// hcs-sync writes one audit_log row per run that creates or changes a REST
+// record: { collection, documentId (the KashFlow Id), action, changes:
+// [{ path, before, after, type }], timestamp }. These read the purchase's rows.
+
+const SYNC_FIELD_WORDS = {
+  GrossAmount: 'Total', NetAmount: 'Net', VATAmount: 'VAT', TotalPaidAmount: 'Paid', DueAmount: 'Due',
+  Status: 'Status', IssuedDate: 'Invoice date', DueDate: 'Due date', PaidDate: 'Paid date',
+  SupplierReference: 'Invoice number', SupplierCode: 'Supplier code', SupplierName: 'Supplier',
+  SupplierId: 'Supplier', ProjectNumber: 'Project', ProjectName: 'Project name', Number: 'Purchase number',
+  Description: 'description', Quantity: 'quantity', Rate: 'price', NominalCode: 'nominal', NominalName: 'nominal name',
+  VATLevel: 'VAT rate', VATRate: 'VAT rate', Amount: 'amount', Date: 'date', Method: 'method', Note: 'note',
+  IsCISReverseCharge: 'CIS reverse charge', CISRCNetAmount: 'CIS net', CISRCVatAmount: 'CIS VAT',
+};
+const MAX_SYNC_PARTS = 6;
+
+const fieldWord = (name) => SYNC_FIELD_WORDS[name]
+  || String(name).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+
+/** A synced value in words: dates as dd/mm/yyyy, objects left out. */
+function syncValue(v) {
+  if (v == null || v === '') return '—';
+  if (v instanceof Date || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}(T|$)/.test(v))) {
+    const d = new Date(v);
+    if (!Number.isNaN(d.getTime())) {
+      return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+    }
+  }
+  if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(2);
+  if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  if (typeof v === 'object') return '…';
+  return String(v);
+}
+
+/** One deepDiff change ({ path, before, after, type }) in words. */
+function describeSyncChange(c) {
+  const m = /^([A-Za-z0-9_]+)(?:\[[^\]]*\])?(?:\.(.+))?$/.exec(String(c?.path || ''));
+  if (!m) return null;
+  const [, head, rest] = m;
+  const isItem = /\[/.test(c.path);
+  const fromTo = `${syncValue(c.before)} → ${syncValue(c.after)}`;
+  if (isItem && (head === 'PaymentLines' || head === 'LineItems')) {
+    const noun = head === 'PaymentLines' ? 'payment' : 'line';
+    if (rest) return `${noun} ${fieldWord(rest.split('.').pop())} ${fromTo}`;
+    const item = c.type === 'removed' ? c.before : c.after;
+    const what = head === 'PaymentLines'
+      ? [item?.Amount != null ? syncValue(Number(item.Amount)) : null, item?.Date ? `on ${syncValue(item.Date)}` : null].filter(Boolean).join(' ')
+      : (item?.Description ? `"${String(item.Description).slice(0, 60)}"` : '');
+    return `${noun} ${c.type === 'removed' ? 'removed' : 'added'}${what ? `: ${what}` : ''}`;
+  }
+  const label = fieldWord(rest ? rest.split('.').pop() : head);
+  if (c.type === 'added') return `${label} set to ${syncValue(c.after)}`;
+  if (c.type === 'removed') return `${label} cleared (was ${syncValue(c.before)})`;
+  return `${label} ${fromTo}`;
+}
+
+/** What one sync run changed on the purchase, in words. Pure. */
+export function describeSyncChanges(changes = []) {
+  const parts = (changes || []).map(describeSyncChange).filter(Boolean);
+  if (parts.length <= MAX_SYNC_PARTS) return parts.join('; ');
+  return `${parts.slice(0, MAX_SYNC_PARTS).join('; ')}; and ${parts.length - MAX_SYNC_PARTS} more`;
+}
+
+/**
+ * hcs-sync's audit_log rows for the KashFlow purchase this document is linked
+ * to, newest first. `auditCollection` is the REST database's audit_log
+ * collection. Empty when the document isn't linked or the read fails.
+ */
+export async function kashflowSyncHistory(auditCollection, purchaseId, { limit = 100 } = {}) {
+  const id = Number(purchaseId);
+  if (!auditCollection || purchaseId == null || purchaseId === '' || !Number.isFinite(id)) return [];
+  try {
+    return await auditCollection
+      .find({ collection: 'purchases', documentId: id })
+      .project({ action: 1, changes: 1, timestamp: 1, runId: 1 })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .toArray();
+  } catch (err) {
+    logger.warn(`[documentEntry] Couldn't read the KashFlow sync history of purchase ${id}: ${err.message}`);
+    return [];
+  }
+}
+
 /**
  * Everything that happened to a document, newest first, for the admin Audit
- * log tab: state and flag changes, entry saves, server readings, type checks
- * and notifications. Pure. Each row is { at, who, what, detail, kind }.
+ * log tab: state and flag changes, entry saves, server readings, type checks,
+ * notifications, and what hcs-sync changed on the linked KashFlow purchase
+ * (`syncHistory`, from kashflowSyncHistory). Pure. Each row is
+ * { at, who, what, detail, kind }.
  */
-export function auditTimeline(doc, notifications = []) {
+export function auditTimeline(doc, notifications = [], syncHistory = []) {
   const rows = [];
   const whoOf = (by) => by?.name || (by === undefined ? '' : 'system');
   for (const h of doc?.processingHistory || []) {
@@ -624,6 +710,16 @@ export function auditTimeline(doc, notifications = []) {
     const status = { shadow: 'would send', recorded: 'recorded from Paperless', sent: 'sent', failed: 'failed', claimed: 'sending' }[n.status] || n.status || '';
     const who = n.triggeredBy?.name || (n.source === 'paperless' ? 'Paperless' : n.source === 'backfill' ? 'backfill' : 'hcs-app');
     rows.push({ at: n.createdAt, who, what: NOTIFICATION_WORDS[n.kind] || n.kind, detail: [status, ...failed].filter(Boolean).join('; '), kind: 'notify' });
+  }
+  for (const s of syncHistory || []) {
+    const created = s.action === 'create';
+    rows.push({
+      at: s.timestamp,
+      who: 'KashFlow sync',
+      what: created ? 'First synced from KashFlow' : 'Changed in KashFlow',
+      detail: created ? '' : describeSyncChanges(s.changes),
+      kind: 'sync',
+    });
   }
   return rows
     .filter((r) => r.at)
@@ -876,6 +972,8 @@ export default {
   ensureClassified,
   entryChanges,
   auditTimeline,
+  describeSyncChanges,
+  kashflowSyncHistory,
   saveEntry,
   completeEntry,
   setCreditNote,
