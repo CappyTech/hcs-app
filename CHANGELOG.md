@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.151.2] - 2026-11-25
+
+### Changed
+- **The purchase draft page goes back to the queues.** A draft for an invoice already in KashFlow, or a credit note, isn't in any queue. Its back link used to be "← All documents". It is now "← Queues", as on the entry screen, with All documents beside it. A draft for an invoice in Needs Data Entry or Ready for KashFlow still goes back to that queue.
+
 ## [6.151.1] - 2026-11-25
 
 ### Fixed

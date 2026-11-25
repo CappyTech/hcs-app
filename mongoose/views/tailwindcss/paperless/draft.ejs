@@ -1,15 +1,12 @@
 <div class="w-full py-4 px-4">
-	<% /* Back to the queue it's in; one already in KashFlow (or a credit note) is in none */ %>
+	<% /* Back to the queue it's in; one already in KashFlow (or a credit note) is in none, so back to the queues, as on the entry screen */ %>
 	<% const _queueBack = !doc ? null
 		: doc.processingState === 'awaiting_entry' ? { key: 'needs-entry', label: 'Needs Data Entry' }
 		: doc.processingState === 'entered' ? { key: 'ready', label: 'Ready for KashFlow' }
 		: null; %>
 	<nav class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-		<% if (_queueBack) { %>
-			<a href="/paperless/queues/<%= _queueBack.key %>" class="text-green-700 dark:text-green-400 hover:underline">← <%= _queueBack.label %></a>
-		<% } else { %>
-			<a href="/paperless/ocr" class="text-green-700 dark:text-green-400 hover:underline">← All documents</a>
-		<% } %>
+		<a href="/paperless/queues<%= _queueBack ? `/${_queueBack.key}` : '' %>" class="text-green-700 dark:text-green-400 hover:underline">← <%= _queueBack ? _queueBack.label : 'Queues' %></a>
+		<a href="/paperless/ocr" class="text-green-700 dark:text-green-400 hover:underline">All documents</a>
 		<a href="/paperless/ocr/<%= paperlessId %>/entry" class="text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-pencil-square"></i> Edit entry</a>
 		<a href="/paperless/ocr/<%= paperlessId %>" class="text-green-700 dark:text-green-400 hover:underline">Details</a>
 	</nav>

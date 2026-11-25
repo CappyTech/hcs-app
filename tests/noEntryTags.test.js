@@ -134,7 +134,7 @@ describe('an excluded invoice is not entered or sent', () => {
 describe('the KashFlow draft page', () => {
   it('links back to its queue and to the entry screen', () => {
     const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/draft.ejs'), 'utf8');
-    assert.match(view, /href="\/paperless\/queues\/<%= _queueBack\.key %>"/);
+    assert.match(view, /href="\/paperless\/queues<%= _queueBack \? `\/\$\{_queueBack\.key\}` : '' %>"/);
     assert.match(view, /Ready for KashFlow/);
     assert.match(view, /href="\/paperless\/ocr\/<%= paperlessId %>\/entry"[^>]*>.*Edit entry<\/a>/);
   });

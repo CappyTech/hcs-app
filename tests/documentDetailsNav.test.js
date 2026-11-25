@@ -62,12 +62,13 @@ describe('readability and back links on linked documents', () => {
     assert.match(view, /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/remove"[\s\S]*?data-confirm=/);
   });
 
-  it("the KashFlow draft only links back to a queue the document is in", async () => {
+  it("the KashFlow draft links back to a queue the document is in, else to the queues", async () => {
     const draft = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/draft.ejs'), 'utf8');
     const nav = draft.slice(draft.indexOf('_queueBack ='), draft.indexOf('</nav>'));
     assert.match(nav, /processingState === 'awaiting_entry' \? \{ key: 'needs-entry'/);
     assert.match(nav, /processingState === 'entered' \? \{ key: 'ready'/);
-    assert.match(nav, /← All documents/);
+    assert.match(nav, /← <%= _queueBack \? _queueBack\.label : 'Queues' %>/);
+    assert.match(nav, /href="\/paperless\/ocr"[^>]*>All documents/);
   });
 });
 
