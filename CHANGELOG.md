@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.4] - 2026-11-25
+
+### Fixed
+- **The entry screen's back link only names a queue the document is in.** A document already in KashFlow, a credit note or a reviewed statement showed "← Needs Data Entry" (and linked there). They now go back to "← Queues".
+
 ## [6.149.2] - 2026-11-25
 
 ### Changed

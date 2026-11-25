@@ -740,6 +740,16 @@ describe('entry view', () => {
     assert.ok(!(await render(cn)).includes('Not a credit note'));
   });
 
+  it('links back only to a queue the document is in', async () => {
+    const back = async (doc) => (await render({ paperlessId: 1, customFields: [], documentType: PI, ...doc })).match(/<nav[\s\S]*?<\/nav>/)[0];
+    assert.match(await back({ processingState: 'awaiting_entry' }), /href="\/paperless\/queues\/needs-entry"[^>]*>← Needs Data Entry/);
+    assert.match(await back({ processingState: 'entered' }), /href="\/paperless\/queues\/ready"[^>]*>← Ready for KashFlow/);
+    assert.match(await back({ documentType: STATEMENT, statementReviewed: false }), /href="\/paperless\/queues\/statements"[^>]*>← Statements to Review/);
+    for (const doc of [{ processingState: 'sent' }, { processingState: 'manual_kashflow', creditNote: true }, { documentType: STATEMENT, statementReviewed: true }]) {
+      assert.match(await back(doc), /href="\/paperless\/queues"[^>]*>← Queues/, JSON.stringify(doc));
+    }
+  });
+
   it('shows the Audit log tab to admins only, and the rail to everyone', async () => {
     const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', customFields: [] };
     const audit = [{ at: new Date('2026-10-03T09:00:00Z'), who: 'bev', what: 'Entry completed', detail: 'Needs data entry → Ready for KashFlow', kind: 'state' }];

@@ -32,7 +32,9 @@ const labelCls = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-
 const smallBtn = 'inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition';
 const railHead = 'text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2';
 const disabled = locked ? 'disabled' : '';
-const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
+// Only a queue the document is actually in (In KashFlow, credit notes and reviewed statements are in none)
+const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : state === 'awaiting_entry' ? 'needs-entry'
+  : kind === 'statement' && !doc.statementReviewed ? 'statements' : '';
 const when = (d, opts) => (d ? new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', ...(opts || {}) }) : '');
 const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }) : '—');
 const nfk = doc.excludedReason === 'not_for_kashflow';
