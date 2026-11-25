@@ -493,7 +493,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               <% } %>
             </div>
             <% if (err('lines')) { %><p class="text-xs text-red-700 dark:text-red-400 mb-1"><%= err('lines') %></p><% } %>
-            <p class="text-xs text-gray-400 mb-2">Clear every box on a line to remove it. Total is worked out from quantity × price if left blank.<%= locals.subcontractor ? ' Mark each line Labour or Materials: CIS is taken off the labour.' : '' %></p>
+            <p class="text-xs text-gray-400 mb-2">Remove a line with its <i class="bi bi-x-lg"></i>, or clear every box on it. Total is worked out from quantity × price if left blank.<%= locals.subcontractor ? ' Mark each line Labour or Materials: CIS is taken off the labour.' : '' %></p>
             <div class="space-y-3" data-lines>
               <% for (let i = 0; i < lineCount; i++) { const l = (values.lines || [])[i] || {}; %>
                 <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2" data-line="<%= i %>">
@@ -504,9 +504,13 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                         <option value="labour" <%= role === 'labour' ? 'selected' : '' %>>Labour</option>
                         <option value="materials" <%= role === 'materials' ? 'selected' : '' %>>Materials</option>
                       </select>
+                      <% if (!locked) { %><button type="button" data-remove-line aria-label="Remove line <%= i + 1 %>" title="Remove this line (saved when you press Save)" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition"><i class="bi bi-x-lg"></i></button><% } %>
                     </div>
                   <% } else { %>
-                  <div class="text-xs text-gray-400" data-line-label>Line <%= i + 1 %></div>
+                  <div class="flex items-center gap-2">
+                    <div class="text-xs text-gray-400 mr-auto" data-line-label>Line <%= i + 1 %></div>
+                    <% if (!locked) { %><button type="button" data-remove-line aria-label="Remove line <%= i + 1 %>" title="Remove this line (saved when you press Save)" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition"><i class="bi bi-x-lg"></i></button><% } %>
+                  </div>
                   <% } %>
                   <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">Description</span><input name="lines[<%= i %>][description]" value="<%= val(l.description) %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" class="<%= inputCls(`lines.${i}.description`) %>" <%= disabled %>></label>
                   <div class="grid grid-cols-4 gap-2">
