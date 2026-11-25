@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.151.1] - 2026-11-25
+
+### Fixed
+- **Screwfix/Electricfix invoices with more than a couple of lines read the gross as total goods and found no VAT.** Their totals table has "VAT" over "Applied" with the "Product … Gross Net" heading row set between the two. On a longer invoice the reader walks up the column past the lines to find the heading. It stopped at that in-between row, so the VAT column was never named. With no VAT figure, goods + VAT = total couldn't pick Net over the gross "Sub total". Now the walk carries on past a heading row with nothing in that column, as long as it sits within a couple of lines.
+  - That also stops a supplier layout taught on a shorter invoice from winning. On a longer invoice its saved total spots land on a line or on "Total Paid", but totals that add up now beat them.
+  - `READER_VERSION` 12, so stored readings are read again. Entries already saved keep their figures.
+
 ## [6.151.0] - 2026-11-25
 
 ### Added

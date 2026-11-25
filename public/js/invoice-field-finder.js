@@ -367,7 +367,9 @@ function columnTotals(rows) {
       for (; !hit && r >= 0 && rows[r].page === row.page; r--) {
         const w = over(r);
         if (!w.length) {
-          if (lastY != null) break;
+          // A heading over two rows can have another row of headings set
+          // between them (Screwfix: "VAT" 569, "Product … Net" 566, "Applied" 563)
+          if (lastY != null && rows[r].y - lastY > rows[r].h * 2.6) break;
           continue;
         }
         if (lastY != null && rows[r].y - lastY > rows[r].h * 2.6) break;
