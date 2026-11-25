@@ -303,4 +303,42 @@ describe('VAT-inclusive prices (Screwfix layout, two lines)', () => {
     ]);
     assert.deepEqual(brief(findLines(plain)), [['WIDGET C', 2, 5, 10, null]]);
   });
+
+  // Five lines push the totals row past the first look up the column, so the
+  // VAT heading ("VAT" over "Applied", with the "Net" row set between them)
+  // has to be found by the walk up past the lines
+  const fiveLines = (() => {
+    const head = [
+      ['Product', 29.4, 566, 22.7, 6], ['Description', 126.4, 566, 33, 6], ['Qty', 237.5, 566, 10, 6], ['Unit', 270.7, 569, 11.7, 6], ['Price', 269.2, 563, 14.7, 6],
+      ['Sub', 312.8, 569, 11.3, 6], ['Total', 311.3, 563, 14.3, 6], ['Discount', 344.9, 569, 25.7, 6], ['%', 355.1, 563, 5.3, 6], ['Discount', 384.2, 569, 25.7, 6], ['Value', 389.1, 563, 16, 6],
+      ['Gross', 430.3, 566, 17.3, 6], ['Net', 476.1, 566, 9.7, 6], ['VAT', 516.8, 569, 12, 6], ['Applied', 511.8, 563, 22, 6], ['VAT', 550.9, 569, 12, 6], ['%', 554.2, 563, 5.3, 6],
+    ];
+    const rows = [];
+    for (let i = 0; i < 5; i++) {
+      const y = 553 - i * 10;
+      rows.push([`1000${i}`, 31.9, y, 17.7, 6], [`WIDGET ${i}`, 59.4, y, 60, 6], ['1', 240.8, y, 3.3, 6], ['12.00', 279.5, y, 15, 6], ['12.00', 321.4, y, 15, 6],
+        ['0.00', 361.4, y, 11.7, 6], ['0.00', 403.4, y, 11.7, 6], ['12.00', 441.9, y, 15, 6], ['10.00', 483.9, y, 15, 6], ['2.00', 529.1, y, 11.7, 6], ['20.0', 555.3, y, 11.7, 6]);
+    }
+    const totals = [
+      ['Sub total', 263.7, 499, 25.7, 6], ['60.00', 321.4, 499, 15, 6], ['0.00', 403.3, 499, 11.7, 6], ['£60.00', 438.6, 499, 18.3, 6], ['£50.00', 480.5, 499, 18.3, 6], ['£10.00', 525.8, 499, 15, 6],
+      ['Total Paid:', 398.6, 478, 38.2, 8], ['£60.00', 520.7, 478, 24.5, 8],
+    ];
+    return page([...head, ...rows, ...totals]);
+  })();
+
+  it('takes goods and VAT from Net and VAT Applied on a longer invoice', () => {
+    const f = findFields(fiveLines);
+    assert.deepEqual([f.totalGoods?.value, f.totalVat?.value, f.invoiceTotal?.value], ['50.00', '10.00', '60.00']);
+  });
+
+  it('a supplier layout taught on a shorter invoice does not beat totals that add up', () => {
+    // Spots learned where the totals sat on a two-line invoice; here they land on a line and on Total Paid
+    const layout = {
+      totalGoods: { page: 1, x: 480.5, y: 527.5, w: 18.3, h: 7.5 },
+      totalVat: { page: 1, x: 520.7, y: 476, w: 24.5, h: 10 },
+      invoiceTotal: { page: 1, x: 520.7, y: 506, w: 24.5, h: 10 },
+    };
+    const f = findFields(fiveLines, { layout });
+    assert.deepEqual([f.totalGoods?.value, f.totalVat?.value, f.invoiceTotal?.value], ['50.00', '10.00', '60.00']);
+  });
 });
