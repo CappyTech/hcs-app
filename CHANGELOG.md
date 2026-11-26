@@ -11,6 +11,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - A passkey counts as two-factor sign-in, because it always asks for the device's own unlock. A role that requires 2FA is satisfied by a passkey or an authenticator app.
   - Passkeys are tied to this app's address (`BASE_URL`, else the address the browser used). Moving the app to a new domain means adding passkeys again.
   - New security events `passkey_added` and `passkey_removed` at /admin/security-events.
+- **Admins can clear someone's two-factor sign-in.** For a person who has lost their phone or security key, the user edit page has a new Two-factor sign-in card. It shows their passkeys and whether an authenticator app is set up. Tick passkeys, the authenticator app (with its backup codes), or both, and confirm with your own password. Their password is left as it is. If a role they hold requires 2FA, they're asked to set it up again when they next sign in. Each clear is recorded at /admin/security-events with the admin's name.
 
 ### Changed
 - `Permissions-Policy` now allows `publickey-credentials-create` and `publickey-credentials-get` for this site (both were denied), which passkeys need.

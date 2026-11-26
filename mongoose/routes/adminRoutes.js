@@ -3,6 +3,7 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/adminController.js';
 import userRolesCtrl from '../controllers/userRolesController.js';
+import signInSecurityCtrl from '../controllers/userSignInSecurityController.js';
 
 router.get(
   "/admin/deleted-items",
@@ -76,6 +77,13 @@ router.post(
   "/admin/users/:uuid/roles",
   authService.ensureRole("admin"),
   userRolesCtrl.postUserRoles,
+);
+
+// Clear a person's authenticator app and/or passkeys (lost device).
+router.post(
+  "/admin/users/:uuid/clear-2fa",
+  authService.ensureRole("admin"),
+  signInSecurityCtrl.postClearTwoFactor,
 );
 
 export default router;
