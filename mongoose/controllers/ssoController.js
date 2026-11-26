@@ -6,6 +6,7 @@ import logger from '../../services/loggerService.js';
 import mdb from '../services/mongooseDatabaseService.js';
 import encryptionService from '../../services/encryptionService.js';
 import __auditLogService from '../../services/auditLogService.js';
+import { hasPasskeys } from '../../services/passkeyService.js';
 
 // Roles allowed to receive an hcs-sync SSO token. The sync dashboard exposes
 // financial data and destructive operations (dedup, manual sync), so it is
@@ -15,6 +16,22 @@ function getAllowedSsoRoles() {
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/**
+ * Which second step POST /api/sso/token can check for this account:
+ *   'totp'    — an authenticator app is set up: the form must send its code.
+ *   'passkey' — passkeys only. A passkey can't be used on hcs-sync's own form
+ *               (the browser offers it only on hcs-app's address), so the token
+ *               is refused and the person signs in through the hcs-app handoff
+ *               (GET /sso/hcs-sync), where the passkey works.
+ *   null      — no second factor: password alone, as before.
+ * Exported for tests.
+ */
+export function syncSecondFactor(user) {
+  if (user?.totpEnabled && user?.totpSecret) return 'totp';
+  if (hasPasskeys(user)) return 'passkey';
+  return null;
 }
 
 function isRoleAllowedForSync(role) {
@@ -337,9 +354,21 @@ export const issueTokenForSync = async (req, res) => {
     });
   }
 
-  // 2FA: users with TOTP enabled must supply a valid code — the sync login
-  // must not be a way to sidestep two-factor authentication.
-  if (user.totpEnabled && user.totpSecret) {
+  // 2FA: the sync login must not be a way to sidestep two-factor
+  // authentication. TOTP users supply a code; passkey-only users are sent to
+  // the hcs-app handoff, where their passkey works (syncSecondFactor).
+  const secondFactor = syncSecondFactor(user);
+  if (secondFactor === "passkey") {
+    logger.info("[sso] /api/sso/token: \"%s\" has passkeys only — refused, use the hcs-app sign-in", user.username);
+    __auditLogService.record("sso_token_denied", req, {
+      userId: user._id, username: user.username, meta: { reason: "passkey_required" },
+    });
+    return res.status(403).json({
+      error: "This account signs in with a passkey. Use \"Sign in with a passkey\" instead.",
+      code: "passkey_required",
+    });
+  }
+  if (secondFactor === "totp") {
     const totpCode = String(req.body?.totp || "").trim();
     if (!totpCode) {
       return res.status(401).json({
