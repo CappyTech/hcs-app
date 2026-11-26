@@ -19,6 +19,8 @@ const EVENT_TYPES = [
   'totp_enabled',
   'totp_disabled',
   'backup_codes_regenerated',
+  'passkey_added',
+  'passkey_removed',
   'sessions_revoked',
   'role_changed',
   'email_changed',

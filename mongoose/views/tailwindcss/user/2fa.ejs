@@ -1,3 +1,9 @@
+<%
+  // Locals: next, hasPasskey, hasTotp (twoFAController.render2FAPage).
+  // The passkey is offered first; the authenticator / backup code below it.
+  const _hasPasskey = typeof hasPasskey !== 'undefined' && hasPasskey;
+  const _hasTotp = typeof hasTotp === 'undefined' ? true : hasTotp;
+%>
 <div class="max-w-md mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
@@ -8,6 +14,31 @@
         </div>
       </div>
       <h1 class="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6">Two-Factor Authentication</h1>
+
+      <% if (_hasPasskey) { %>
+      <div data-passkey-block hidden>
+        <p class="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">Confirm it's you with your passkey.</p>
+        <button type="button" data-passkey-2fa
+          class="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-sm font-medium disabled:opacity-60">
+          <i class="bi bi-fingerprint" aria-hidden="true"></i> Use your passkey
+        </button>
+        <p data-passkey-error hidden role="alert" class="mt-2 text-sm text-red-600 dark:text-red-400 text-center"></p>
+        <% if (_hasTotp) { %>
+        <div class="flex items-center gap-3 my-6">
+          <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+          <span class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">or enter a code</span>
+          <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+        </div>
+        <% } %>
+      </div>
+      <% if (!_hasTotp) { %>
+      <p data-passkey-unsupported hidden class="text-sm text-amber-700 dark:text-amber-300 text-center">
+        This browser can't use passkeys. Sign in from a browser or device that can, or ask an administrator for help.
+      </p>
+      <% } %>
+      <% } %>
+
+      <% if (_hasTotp) { %>
       <form action="/user/2fa" method="POST" class="space-y-6">
         <%- include('../partials/csrfHidden.ejs') %>
         <% if (typeof next !== 'undefined' && next) { %>
@@ -22,10 +53,15 @@
           </p>
         </div>
         <button type="submit"
-          class="w-full inline-flex items-center justify-center gap-1.5 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-sm font-medium">
+          class="w-full inline-flex items-center justify-center gap-1.5 <%= _hasPasskey ? 'border border-green-600 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm' %> px-6 py-3 rounded-lg transition font-medium">
           <i class="bi bi-shield-lock"></i> Verify
         </button>
       </form>
+      <% } %>
+
+      <p class="mt-6 text-center text-sm">
+        <a href="/user/login" class="text-green-700 dark:text-green-400 hover:underline">Back to sign in</a>
+      </p>
     </div>
   </div>
 </div>

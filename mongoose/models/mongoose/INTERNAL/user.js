@@ -122,6 +122,21 @@ const userSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    // WebAuthn passkeys (services/passkeyService.js). Public keys only.
+    passkeys: {
+        type: [new mongoose.Schema({
+            credentialId: { type: String, required: true },
+            publicKey: { type: String, required: true },
+            counter: { type: Number, default: 0 },
+            transports: { type: [String], default: [] },
+            deviceType: { type: String, default: null },
+            backedUp: { type: Boolean, default: false },
+            name: { type: String, default: 'Passkey' },
+            createdAt: { type: Date, default: Date.now },
+            lastUsedAt: { type: Date, default: null },
+        }, { _id: false })],
+        default: []
+    },
     customPermissions: {
         departments: { type: [String], default: [] },
         models: { type: Map, of: String, default: () => new Map() },
@@ -155,6 +170,9 @@ const userSchema = new mongoose.Schema({
     toJSON: { getters: true },
     toObject: { getters: true }
 });
+
+// Passkey sign-in looks the account up by credential id.
+userSchema.index({ 'passkeys.credentialId': 1 }, { sparse: true });
 
 // Hash password before save.
 // Guard: if the value already looks like a bcrypt hash (set by a controller that

@@ -78,6 +78,7 @@ import __emailRoutes from './mongoose/routes/emailRoutes.js';
 import __inAppNotificationRoutes from './mongoose/routes/inAppNotificationRoutes.js';
 import __inAppNotificationService from './mongoose/services/inAppNotificationService.js';
 import __twoFARoutes from './mongoose/routes/twoFARoutes.js';
+import __passkeyRoutes from './mongoose/routes/passkeyRoutes.js';
 import __subcontractorRoutes from './mongoose/routes/subcontractorRoutes.js';
 import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
 import __holidayRoutes from './mongoose/routes/holidayRoutes.js';
@@ -719,6 +720,7 @@ const main = async () => {
     appRouter.use('/', __emailRoutes);
     appRouter.use('/', __inAppNotificationRoutes);
     appRouter.use('/', __twoFARoutes);
+    appRouter.use('/', __passkeyRoutes);
     appRouter.use('/', __subcontractorRoutes);
     appRouter.use('/', __submissionRoutes);
     appRouter.use('/', __holidayRoutes);

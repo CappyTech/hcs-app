@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.154.0] - 2026-11-26
+
+### Added
+- **Passkeys.** Sign in with your fingerprint, face or device PIN. Account Settings has a new Passkeys card, above the authenticator-app card, where you add, name and remove passkeys. Removing one asks for your password.
+  - **Sign in with a passkey** sits at the top of the login page. It needs no username, password or code.
+  - **A passkey comes before the authenticator code.** Signing in with a password on an account that has a passkey now goes to the two-factor step, which offers "Use your passkey" first, with the authenticator or backup code below it if one is set up. A password alone no longer gets into an account that has a passkey.
+  - A passkey counts as two-factor sign-in, because it always asks for the device's own unlock. A role that requires 2FA is satisfied by a passkey or an authenticator app.
+  - Passkeys are tied to this app's address (`BASE_URL`, else the address the browser used). Moving the app to a new domain means adding passkeys again.
+  - New security events `passkey_added` and `passkey_removed` at /admin/security-events.
+
+### Changed
+- `Permissions-Policy` now allows `publickey-credentials-create` and `publickey-credentials-get` for this site (both were denied), which passkeys need.
+
 ## [6.153.0] - 2026-11-26
 
 ### Added

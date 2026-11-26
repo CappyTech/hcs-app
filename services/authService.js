@@ -12,6 +12,12 @@ const PUBLIC_PATHS = new Set([
   "/user/verify-sms-otp",
   "/user/verify-totp-reset",
   "/user/2fa",
+  // Passkey sign-in (passkeyRoutes). The login pair runs before any session
+  // exists; the 2FA pair checks userPending2FA in the controller.
+  "/user/passkey/login/options",
+  "/user/passkey/login/verify",
+  "/user/2fa/passkey/options",
+  "/user/2fa/passkey/verify",
   // Microsoft Entra sign-in (OIDC). Both are GET and protected by the OAuth
   // `state` parameter; they must work while logged out. Sign-in only — the
   // callback refuses any email without an existing hcs-app account.
@@ -166,7 +172,10 @@ async function ensureAuthenticated(req, res, next) {
 
   // Per-role 2FA enforcement: privileged roles must enable TOTP before
   // accessing anything beyond their account page.
-  const twoFARole = req.user.totpEnabled ? null : roleRequiring2FA(req.user);
+  // A passkey counts: it always asks for the device's own unlock, so it is
+  // two factors on its own (services/passkeyService.js).
+  const hasSecondFactor = req.user.totpEnabled || (Array.isArray(req.user.passkeys) && req.user.passkeys.length > 0);
+  const twoFARole = hasSecondFactor ? null : roleRequiring2FA(req.user);
   if (twoFARole && !isTwoFASetupPath(reqPath)) {
     if (typeof req.flash === "function") {
       req.flash(

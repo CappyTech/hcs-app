@@ -4,6 +4,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import encryptionService from '../../services/encryptionService.js';
 import totpService from '../../services/totpService.js';
+import { hasPasskeys } from '../../services/passkeyService.js';
 import __auditLogService from '../../services/auditLogService.js';
 
 function getSafeNext(raw) {
@@ -21,7 +22,7 @@ function getSafeNext(raw) {
   return v;
 }
 
-export const render2FAPage = (req, res) => {
+export const render2FAPage = async (req, res) => {
   if (req.session.user) {
     return res.redirect("/");
   }
@@ -33,9 +34,22 @@ export const render2FAPage = (req, res) => {
 
   const pending = req.session.userPending2FA;
   const next = getSafeNext(pending?.next);
+  // Which second steps this account has: the passkey is offered first, the
+  // authenticator code (or a backup code) below it.
+  let hasPasskey = false;
+  let hasTotp = true;
+  try {
+    const user = await mdb.INTERNAL.user.findOne({ uuid: pending.uuid }, { passkeys: 1, totpEnabled: 1 }, { sanitizeFilter: true });
+    hasPasskey = hasPasskeys(user);
+    hasTotp = !!user?.totpEnabled;
+  } catch (err) {
+    logger.warn(`[2fa] could not read second-step methods: ${err.message}`);
+  }
   res.render(path.join("tailwindcss", "user", "2fa"), {
     title: "Two-Factor Authentication",
     next,
+    hasPasskey,
+    hasTotp,
   });
 };
 
