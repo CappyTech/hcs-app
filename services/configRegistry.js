@@ -23,6 +23,8 @@
  */
 
 import publicFeatures from '../mongoose/config/publicFeaturesConfig.js';
+import MODULES from '../mongoose/config/modulesConfig.js';
+import { configKey as moduleKey } from './moduleService.js';
 
 const PUBLIC_FEATURE_IDS = publicFeatures.flatMap((g) => g.items.map((i) => i.id)).join(', ');
 
@@ -132,6 +134,20 @@ export const GROUPS = [
         help: 'The main colour of buttons, links, the navigation and the app icon. Green is also how the app shows "approved" and "done", so only calm colours are offered. Unset means Green. The app icon itself is on Admin → Branding.',
       },
     ],
+  },
+  {
+    id: 'modules',
+    label: 'Modules',
+    icon: 'bi-toggles',
+    description: 'Parts of the app this company can switch off. Each is on until set to false. A module that is off is gone for everyone, admins included: its pages answer "not found", it leaves the navigation, home, lists, search and help, and its background jobs stop. Nothing is deleted; switching it back on restores it.',
+    keys: MODULES.map((m) => ({
+      key: moduleKey(m.id),
+      label: m.label,
+      type: 'boolean',
+      help: m.description + (m.requires?.length
+        ? ` Needs ${m.requires.map((r) => MODULES.find((x) => x.id === r)?.label || r).join(' and ')}: it is off whenever that is.`
+        : ''),
+    })),
   },
   {
     id: 'paperless',

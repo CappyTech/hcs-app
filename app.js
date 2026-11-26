@@ -87,6 +87,7 @@ import __paperlessTags from './mongoose/config/paperlessTagsConfig.js';
 import { paperlessUiBase as __paperlessUiBase } from './mongoose/services/paperless/documentQueueService.js';
 import __organisation from './services/organisationService.js';
 import __brand from './services/brandService.js';
+import __moduleService from './services/moduleService.js';
 import { migrateLegacyKinds as __migrateNotificationKinds } from './mongoose/services/paperless/notificationLogService.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
 import __bankRoutes from './mongoose/routes/bankRoutes.js';
@@ -571,6 +572,9 @@ const main = async () => {
     // outside the password reset flow. Mounted after the /resources static
     // handler so the reset page's own assets never look like leaving.
     appRouter.use(__passwordResetDraft.dropOnLeave);
+    // Optional modules switched off on Configuration → Modules: their APIs and
+    // webhooks answer 404 here, ahead of authentication (pages: see below).
+    appRouter.use(__moduleService.apiGate);
     appRouter.use(authService.ensureAuthenticated);
     // Session time limit: the layout warns before the session ends and offers to
     // extend it (WCAG 2.2.1). Mounted early so every page knows its expiry.
@@ -651,6 +655,10 @@ const main = async () => {
       res.locals.copyrightyear = new Date().getFullYear();
       next();
     });
+    // Pages of an optional module that is switched off answer 404, for everyone
+    // (admins too). After the view locals so the error page renders normally,
+    // and before the route rule, which would otherwise answer 403 first.
+    appRouter.use(__moduleService.gate);
     appRouter.use(authService.ensureRouteAccess);
     // BASE_URL, if nobody has set it, is how the first authenticated user
     // reached the app. CSP's own-origin entries derive from it.

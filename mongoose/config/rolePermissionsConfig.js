@@ -16,6 +16,9 @@
 
 import departmentsConfig from './departmentsConfig.js';
 import accessGroups from './accessGroupsConfig.js';
+// Optional modules a company has switched off (modulesConfig). Checked first in
+// every access function below, admins included: an off module is off for all.
+import modules from '../../services/moduleService.js';
 
 // ── Departments each role may access ──────────────────────────────────
 // Derived from departmentsConfig roles: ['public'] departments go to every
@@ -672,8 +675,8 @@ function getDepartmentsForRole(role, customPerms) {
     ? (roleDepartments[roles[0]] || [])
     : [...new Set(roles.flatMap((r) => roleDepartments[r] || []))];
   const extra = customPerms?.departments || [];
-  if (!extra.length) return base;
-  return [...new Set([...base, ...extra])];
+  const all = extra.length ? [...new Set([...base, ...extra])] : base;
+  return all.filter((d) => modules.isDepartmentEnabled(d));
 }
 
 /**
@@ -686,6 +689,7 @@ function getDepartmentsForRole(role, customPerms) {
  * @returns {{ allowed: boolean, ownOnly: boolean }}
  */
 function canAccess(role, model, operation, customPerms) {
+  if (!modules.isModelEnabled(model)) return { allowed: false, ownOnly: false };
   const roles = toRoles(role);
   if (roles.includes('admin')) return { allowed: true, ownOnly: false };
 
@@ -793,6 +797,7 @@ function matchRoutePattern(reqPath) {
  * @returns {boolean}
  */
 function canAccessRoute(role, routePattern, customPerms) {
+  if (!modules.isPathEnabled(routePattern)) return false;
   const roles = toRoles(role);
   if (roles.includes('admin')) return true;
   const allowed = routeAccess[routePattern];
@@ -810,6 +815,7 @@ function canAccessRoute(role, routePattern, customPerms) {
  * @returns {boolean}
  */
 function canAccessDepartment(role, department, customPerms) {
+  if (!modules.isDepartmentEnabled(department)) return false;
   const roles = toRoles(role);
   if (roles.includes('admin')) return true;
   if (roles.some((r) => (roleDepartments[r] || []).includes(department))) return true;
@@ -825,6 +831,8 @@ function canAccessDepartment(role, department, customPerms) {
  */
 function getListableModels(role, customPerms) {
   const roles = toRoles(role);
+  // Admin's wildcard is narrowed by callers through canAccess, which refuses
+  // models of modules that are off.
   if (roles.includes('admin')) return [{ model: '_wildcard', ownOnly: false }];
 
   const result = [];
@@ -845,7 +853,7 @@ function getListableModels(role, customPerms) {
       ? [...customPerms.models.entries()]
       : Object.entries(customPerms.models);
     for (const [model, perms] of entries) {
-      if (seen.has(model)) continue;
+      if (seen.has(model) || !modules.isModelEnabled(model)) continue;
       for (const { op } of parsePerms(perms)) {
         if (op === 'l') { result.push({ model, ownOnly: false }); seen.add(model); break; }
       }

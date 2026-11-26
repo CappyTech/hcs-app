@@ -1,5 +1,6 @@
 import logger from '../../services/loggerService.js';
 import auditContext from './auditContextService.js';
+import modules from '../../services/moduleService.js';
 
 /**
  * Central background-job scheduler.
@@ -52,6 +53,14 @@ function register(name, { description, intervalMs = null, initialDelayMs = 10_00
 }
 
 async function execute(job, trigger = 'interval') {
+  // A job belonging to a module the company has switched off does nothing.
+  if (!modules.isJobEnabled(job.name)) {
+    job.lastRunAt = new Date();
+    job.lastOutcome = 'skipped';
+    job.lastError = null;
+    job.lastResult = 'Module switched off';
+    return { skipped: true, reason: 'module-off' };
+  }
   if (job.running) {
     logger.warn(`[jobScheduler] ${job.name}: previous run still in progress — skipping ${trigger} run`);
     return { skipped: true };

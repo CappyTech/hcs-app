@@ -2,6 +2,31 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.156.0] - 2026-11-27
+
+### Added
+- **Module switches** (Admin → Configuration → Modules). A company can switch off the parts of the app it doesn't use. Each module is on until it is set to false, so an existing install changes nothing. The modules are:
+  - Finance
+  - Construction Industry Scheme
+  - Bank reconciliation and payments
+  - Job Register
+  - Payroll
+  - Fleet
+  - Health & Safety
+  - Documents (Paperless)
+  - Website
+- CIS, Bank and the Job Register need Finance, and are off whenever Finance is.
+- People and HR, attendance, holiday, tasks, contracts and projects, policies, users and admin are core and always on.
+- A new Help article, "Switching Modules Off", explains this.
+
+### Changed
+- **A module that is off is off for everyone, admins included.** Nothing is deleted, and switching it back on restores it.
+  - Its pages answer 404 with the reason. Its APIs and webhooks get a JSON 404, ahead of sign-in.
+  - It disappears from the navigation, home, overviews, dashboard tiles, lists, the create menu, search and Help.
+  - Its background jobs skip their runs and show "Module off" on Background Jobs.
+- `mongoose/config/modulesConfig.js` lists what each module owns: paths, models, departments, help and jobs.
+- `services/moduleService.js` answers for the whole app. The shared access checks in `rolePermissionsConfig` (`canAccess`, `canAccessRoute`, `canAccessDepartment`, `getDepartmentsForRole`, `getListableModels`) and `canUserOpenPath` consult it first.
+
 ## [6.155.0] - 2026-11-26
 
 ### Added
