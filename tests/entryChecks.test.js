@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { liveChecks, pickValue, parseVatRate, sameLines, VAT_RATES } from '../public/js/entry-checks.js';
+import { liveChecks, netLines, pickValue, parseVatRate, sameLines, VAT_RATES } from '../public/js/entry-checks.js';
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -31,8 +31,30 @@ describe('live checks on the entry form', () => {
       { description: 'b', quantity: '1', price: '', total: '10.49', vatRate: '20' },
     ];
     assert.deepEqual(liveChecks({ totalGoods: '14.97', totalVat: '3', invoiceTotal: '17.97' }, lines), [
-      'Lines add up to £17.97, which is goods + VAT: the line totals include VAT. Enter each line without VAT (at 20%, divide by 1.2) so they add up to total goods £14.97.',
+      'Lines add up to £17.97, which is goods + VAT: the line totals include VAT. Use “Take VAT off the lines” to make each line net, so they add up to total goods £14.97.',
     ]);
+  });
+
+  it('makes VAT-inclusive lines net for the Take VAT off button', () => {
+    const lines = [
+      { description: 'Item one', quantity: '1', price: '7.48', total: '7.48', vatRate: '20' },
+      { description: '', quantity: '', price: '', total: '', vatRate: '' },
+      { description: 'Item two', quantity: '1', price: '10.49', total: '10.49', vatRate: '' },
+      { description: 'Item three', quantity: '1', price: '0', total: '0.00', vatRate: '20' },
+    ];
+    const net = netLines({ totalGoods: '14.97', totalVat: '3.00' }, lines);
+    assert.equal(net[1], null);
+    assert.deepEqual(net.filter(Boolean).map((l) => l.total), ['6.23', '8.74', '0.00']);
+    assert.equal(net[2].vatRate, '20'); // a blank rate is filled from the totals
+    assert.equal(net[2].price, '8.74');
+    assert.equal(net.filter(Boolean).reduce((s, l) => s + Number(l.total), 0).toFixed(2), '14.97');
+  });
+
+  it('offers no Take VAT off when the lines are already net or can’t be worked out', () => {
+    const header = { totalGoods: '14.97', totalVat: '3.00' };
+    assert.equal(netLines(header, [{ description: 'a', quantity: '1', price: '', total: '14.97', vatRate: '20' }]), null);
+    assert.equal(netLines(header, [{ description: 'a', quantity: '', price: '', total: '', vatRate: '20' }]), null);
+    assert.equal(netLines({ totalGoods: '17.97', totalVat: '0' }, [{ description: 'a', quantity: '1', price: '', total: '17.97', vatRate: '0' }]), null);
   });
 
   it('works a line total out from qty × price, and skips the VAT check when a rate is missing', () => {

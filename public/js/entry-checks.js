@@ -3,7 +3,7 @@
  * kept apart so the tests can import them without a DOM.
  */
 import { parseMoney, parseDate, parseReference, FIELDS } from './invoice-field-finder.js';
-import { parseNumber } from './invoice-line-finder.js';
+import { parseNumber, fillMissingRates, netOfVat } from './invoice-line-finder.js';
 
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
 const money = (v) => `£${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -100,7 +100,7 @@ export function liveChecks(header, lines, { labour = null, cisPct = null } = {})
     const sum = withTotals.reduce((s, l) => s + l.t, 0);
     // Line totals that include VAT add up to goods + VAT (Toolstation)
     incVat = off(sum, goods) && vat > 0 && !off(sum, goods + vat, Math.max(0.01, 0.01 * withTotals.length));
-    if (incVat) out.push(`Lines add up to ${money(sum)}, which is goods + VAT: the line totals include VAT. Enter each line without VAT (at 20%, divide by 1.2) so they add up to total goods ${money(goods)}.`);
+    if (incVat) out.push(`Lines add up to ${money(sum)}, which is goods + VAT: the line totals include VAT. Use “Take VAT off the lines” to make each line net, so they add up to total goods ${money(goods)}.`);
     else if (off(sum, goods)) out.push(`Lines add up to ${money(sum)}, but total goods is ${money(goods)}.`);
   }
   if (vat != null && !incVat && !cis.vatIsCis && withTotals.length && withTotals.every((l) => l.rate != null)) {
@@ -113,6 +113,49 @@ export function liveChecks(header, lines, { labour = null, cisPct = null } = {})
   if (goods != null && vat != null && total != null && !cis.vatIsCis && !cis.totalAfterCis && off(goods + vat, total)) {
     out.push(`Goods ${money(goods)} + VAT ${money(vat)} is ${money(goods + vat)}, not the invoice total ${money(total)}.`);
   }
+  return out;
+}
+
+/**
+ * The lines in the form made net, when their totals include VAT (they add up
+ * to goods + VAT, as liveChecks reports): what the "Take VAT off the lines"
+ * button fills in. One entry per line, in form order: null for a blank line,
+ * else { price, total, vatRate } as strings for the boxes. Null when the lines
+ * aren't VAT inclusive, or a line has no total and no qty × price to go on.
+ * Uses the reader's netOfVat, so any penny of rounding goes on the biggest line.
+ * @param {object} header  { totalGoods, totalVat } as typed
+ * @param {Array} lines    [{ quantity, price, total, vatRate }] as typed
+ */
+export function netLines(header, lines) {
+  const goods = num(header.totalGoods);
+  const vat = num(header.totalVat);
+  if (!(goods > 0) || !(vat > 0)) return null;
+  const idx = [];
+  const parsed = [];
+  for (const [i, l] of lines.entries()) {
+    if (isBlank(l)) continue;
+    const q = num(l.quantity);
+    const p = num(l.price);
+    const t = num(l.total) ?? (q != null && p != null ? Math.round(q * p * 100) / 100 : null);
+    const rate = parseVatRate(l.vatRate);
+    if (t == null || !Number.isFinite(t) || Number.isNaN(rate)) return null;
+    idx.push(i);
+    parsed.push({ quantity: q, price: p != null && Number.isFinite(p) ? p : null, total: t, vatRate: rate });
+  }
+  if (!parsed.length) return null;
+  const net = netOfVat(fillMissingRates(parsed, goods, vat), goods, vat);
+  if (!net[0]?.vatInclusive) return null;
+  const out = lines.map(() => null);
+  net.forEach((l, k) => {
+    // Price from the net total, so qty × price is the total: 8.74, not 10.49 / 1.2 = 8.7417
+    const price = l.price == null ? (lines[idx[k]].price ?? '')
+      : String(l.quantity > 0 ? Math.round((l.total / l.quantity) * 10000) / 10000 : l.price);
+    out[idx[k]] = {
+      price,
+      total: l.total.toFixed(2),
+      vatRate: String(l.vatRate),
+    };
+  });
   return out;
 }
 
@@ -177,4 +220,4 @@ export function pickValue(field, text, word) {
   return type === 'date' && text ? dateIn(text) : null;
 }
 
-export default { liveChecks, pickValue, parseVatRate, vatRateProblem, sameLines, VAT_RATES };
+export default { liveChecks, netLines, pickValue, parseVatRate, vatRateProblem, sameLines, VAT_RATES };
