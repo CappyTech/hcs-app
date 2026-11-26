@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.154.1] - 2026-11-26
+
+### Security
+- **The hcs-sync sign-in form no longer lets a passkey-only account in with a password alone.** That form sends a username and password to `POST /api/sso/token`. It already asked for the authenticator code when one is set up, but it didn't know about passkeys. A passkey can't be used on the sync site's own form, because the browser only offers it on this app's address. So an account with passkeys and no authenticator app is now refused there (`passkey_required`, recorded as `sso_token_denied`) and told to use "Sign in with a passkey". That signs in through this app's handoff (`GET /sso/hcs-sync`), where the passkey works. The handoff is hcs-sync's default sign-in, so most people won't notice anything. Accounts with an authenticator app still give its code on the form, as before.
+
 ## [6.154.0] - 2026-11-26
 
 ### Added
