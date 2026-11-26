@@ -161,6 +161,30 @@ describe('line items', () => {
     ]);
   });
 
+  it('an amount column headed "Value ex VAT", with a Terms column and wrapped descriptions', () => {
+    const lines = findLines(page([
+      ['QUANTITY', 40, 600, 40, 8], ['DESCRIPTION', 90, 600, 50, 8], ['PRICE', 340, 600, 24, 8], ['TERMS', 380, 600, 26, 8], ['VALUE ex VAT', 450, 600, 52, 8],
+      ['1', 50, 585, 4, 8], ['110mm Sample Bend 87.5deg', 92, 585, 120, 8], ['8.47', 342, 585, 18, 8], ['8.47', 480, 585, 18, 8],
+      ['Spec 1401-1', 92, 576, 50, 8],
+      ['2', 50, 562, 4, 8], ['25kg Sample Bag', 92, 562, 80, 8], ['4.30', 342, 562, 18, 8], ['8.60', 480, 562, 18, 8],
+      ['Total Goods (Excl VAT)', 300, 500, 90, 8], ['17.07', 480, 500, 22, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.quantity, l.price, l.total]), [
+      ['110mm Sample Bend 87.5deg Spec 1401-1', 1, 8.47, 8.47],
+      ['25kg Sample Bag', 2, 4.3, 8.6],
+    ]);
+  });
+
+  it('"ex VAT" / "inc VAT" on an amount heading say net or gross', () => {
+    const head = (amount) => findLines(page([
+      ['Description', 90, 600, 50, 8], ['Qty', 300, 600, 16, 8], [amount, 450, 600, 60, 8],
+      ['Sample item', 92, 585, 60, 8], ['1', 304, 585, 4, 8], ['12.00', 480, 585, 22, 8],
+    ]));
+    for (const h of ['Value ex VAT', 'Amount (excl. VAT)', 'Net Excluding VAT', 'Total inc VAT', 'Value (incl VAT)']) {
+      assert.deepEqual(head(h).map((l) => l.total), [12], h);
+    }
+  });
+
   it('a hire invoice: Date From / Date To / Description / Value, a section title in between', () => {
     const lines = findLines(page([
       ['Date From', 33.9, 508, 38.6, 7.8], ['Description', 140.4, 508, 42.9, 7.8], ['Value', 546.2, 507.8, 20.4, 7.8], ['Date To', 95.4, 508, 28, 7.8],

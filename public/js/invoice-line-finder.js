@@ -29,9 +29,20 @@ const COLUMN_TYPES = [
   ['date', /^(date|date\s*(from|to)|from|to|period)$/i],
   ['desc', /^(description|details|particulars|product|parts|items?|service|narrative|labou?r|materials|hire|charges)$/i],
 ];
-// "Unit Price (£)", "Subtotal (GBP)": the currency is only a label
-const bareHeading = (text) => text.trim().replace(/\s*[([]\s*(£|gbp)\s*[)\]]$/i, '');
-const columnType = (text) => (COLUMN_TYPES.find(([, re]) => re.test(bareHeading(text))) || [null])[0];
+// "Unit Price (£)", "Subtotal (GBP)": the currency is only a label.
+// "Value ex VAT", "Amount (excl. VAT)": net is what the plain name means anyway.
+const EX_VAT = /\s*[([]?\s*(ex|exc|excl|excluding)\.?\s*vat\s*[)\]]?$/i;
+// "Value inc VAT", "Total (incl. VAT)": the line's gross
+const INC_VAT = /\s*[([]?\s*(inc|incl|including)\.?\s*vat\s*[)\]]?$/i;
+const bareHeading = (text) => text.trim().replace(/\s*[([]\s*(£|gbp)\s*[)\]]$/i, '').replace(EX_VAT, '');
+const columnType = (text) => {
+  const bare = bareHeading(text);
+  if (INC_VAT.test(bare)) {
+    const rest = bare.replace(INC_VAT, '');
+    return rest && /^(net|gross|amount|amt|value|total|line\s*total|sub\s*-?\s*total)$/i.test(rest) ? 'gross' : null;
+  }
+  return (COLUMN_TYPES.find(([, re]) => re.test(bare)) || [null])[0];
+};
 
 const VAT_CODES = { S: 20, Z: 0, E: 0, X: 0, R: 5, L: 5 };
 // Two money figures the same, allowing for rounding
