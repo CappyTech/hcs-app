@@ -12,6 +12,7 @@ import rbac from '../config/rolePermissionsConfig.js';
 import departments from '../config/departmentsConfig.js';
 import overviews from '../config/overviews/index.js';
 import { canUserOpenPath } from '../services/overviewAccess.js';
+import modules from '../../services/moduleService.js';
 import tileMeta from '../config/dashboardTileMetaConfig.js';
 import dashboardCountService from '../services/dashboardCountService.js';
 import { endOfToday, endOfWeek, endOfMonth } from 'date-fns';
@@ -35,6 +36,9 @@ const denyGuard = (config, op) =>
  * external links (nothing to match), and internal paths with no entry.
  */
 const canUseTile = (tile, userRole) => {
+  // A tile for a module the company has switched off is gone for everyone.
+  if (tile?.link && String(tile.link).startsWith('/') && !modules.isPathEnabled(tile.link)) return false;
+  if (tile?.model && !modules.isModelEnabled(tile.model)) return false;
   if (userRole === 'admin' || (Array.isArray(userRole) && userRole.includes('admin'))) return !tile?.hideFromAdmin;
   const link = String(tile?.link || '');
   if (!link.startsWith('/')) return true; // external link

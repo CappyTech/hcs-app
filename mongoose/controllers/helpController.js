@@ -1,5 +1,6 @@
 import rbac from '../config/rolePermissionsConfig.js';
 import apiDocs from '../config/apiDocsConfig.js';
+import modules from '../../services/moduleService.js';
 
 const helpContent = [
   // ─────────────────────────────────────────────────────────────────────────
@@ -1676,6 +1677,26 @@ const helpContent = [
         ],
       },
       {
+        id: 'modules',
+        title: 'Switching Modules Off',
+        badge: 'Admin',
+        description: 'Not every company uses every part of the app. Configuration → Modules (/admin/config/modules) switches off the ones this company doesn\'t need, such as CIS, Payroll, Fleet or the Website editor.',
+        steps: [
+          'Go to /admin/config/modules.',
+          'Set a module to false and save. It applies on the next page anyone opens, with no restart.',
+          'To bring it back, set it to true, or Revert it. Every module is on until it is switched off.',
+        ],
+        fields: [
+          { name: 'What goes', required: '', description: 'Its pages answer "not found", and it leaves the navigation, home, overviews, lists, the create menu, search and Help, for everyone including admins. Its background jobs stop, and its APIs and webhooks answer 404.' },
+          { name: 'What stays', required: '', description: 'Everything already recorded. Nothing is deleted, so switching a module back on brings it all back as it was.' },
+          { name: 'Modules that need another', required: '', description: 'CIS, Bank reconciliation and the Job Register need Finance. Switching Finance off switches them off too.' },
+          { name: 'Always on', required: '', description: 'People and HR, attendance, holiday, tasks, contracts and projects, policies, users and administration.' },
+        ],
+        notes: [
+          'Switching a module off does not change who may use it when it is on: job roles and permissions are untouched.',
+        ],
+      },
+      {
         id: 'email-notifications',
         title: 'Email & Notifications',
         badge: 'Admin',
@@ -1912,9 +1933,12 @@ export const getHelp = function (req, res) {
   };
 
   const filtered = helpContent
+    // Help for a module the company has switched off is left out.
+    .filter(cat => modules.isHelpEnabled(cat.id))
     .map(cat => ({
       ...cat,
       articles: cat.articles.filter(art => {
+        if (!modules.isHelpEnabled(art.id)) return false;
         // `groups: [[group, level], ...]` also opens an article to any job
         // role holding one of those permission groups at that level.
         if (art.groups && art.groups.some(([g, lvl]) => rbac.hasGroup(req.user, g, lvl))) return true;

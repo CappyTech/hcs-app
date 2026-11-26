@@ -15,6 +15,7 @@ import rbac from '../config/rolePermissionsConfig.js';
 import registry from '../config/overviews/index.js';
 import tiles from '../config/dashboardTilesConfig.js';
 import { canOpenPath } from './overviewEngine.js';
+import modules from '../../services/moduleService.js';
 
 export const PAGE_LIMIT = 8;
 
@@ -45,6 +46,7 @@ export function createPageList({ hierarchy = registry, tileConfig = tiles, acces
     const pages = [];
     const add = (title, subtitle, href) => {
       if (!title || !href || seen.has(href)) return;
+      if (!modules.isPathEnabled(href)) return; // a module switched off
       seen.add(href);
       pages.push({ title, subtitle: subtitle || '', href });
     };
