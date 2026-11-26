@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.153.0] - 2026-11-26
+
+### Added
+- **"Take VAT off the lines" on the entry screen.** When the lines add up to goods + VAT instead of goods (the line totals include VAT), the "These don’t add up yet" box now has a button that makes every line net at its VAT rate. Before, the warning said to divide each line by 1.2 by hand. The button uses the same sums as the document reader: each total is divided by 1 + its rate, any penny of rounding goes on the biggest line so the lines add up to total goods, the price becomes the net total ÷ qty, and a blank VAT % is filled in from the totals. Nothing is stored until you save. The button doesn't show when a line has no total and no qty × price to go on.
+
 ## [6.152.1] - 2026-11-26
 
 ### Fixed

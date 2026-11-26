@@ -26,7 +26,7 @@
  */
 import { findFields, locateValue, normalise, toItems, charBox, FIELDS } from '/resources/js/invoice-field-finder.js';
 import { findLines, fillMissingRates, netOfVat, findPaymentTerms, findVatNumbers, dueFromTerms, describeTerms } from '/resources/js/invoice-line-finder.js';
-import { liveChecks, pickValue, sameLines } from '/resources/js/entry-checks.js';
+import { liveChecks, netLines, pickValue, sameLines } from '/resources/js/entry-checks.js';
 import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
@@ -374,6 +374,25 @@ function renderChecks() {
   if (!problems.length) return;
   checksBox.append(el('p', { className: 'font-medium mb-1' }, icon('exclamation-triangle-fill'), ' These don’t add up yet'));
   checksBox.append(el('ul', { className: 'list-disc ml-5 space-y-0.5' }, ...problems.map((p) => el('li', { textContent: p }))));
+  // Line totals that include VAT: one click makes them net, no dividing by 1.2
+  const net = netLines(header, formLines());
+  if (net) {
+    const btn = el('button', {
+      type: 'button',
+      className: 'mt-2 inline-flex items-center gap-1 rounded-md border border-current px-2 py-1 text-xs font-medium hover:bg-white/10',
+    }, icon('percent'), ' Take VAT off the lines');
+    btn.dataset.takeVatOff = '';
+    btn.addEventListener('click', () => {
+      const blocks = lineBlocks();
+      net.forEach((l, i) => {
+        if (!l || !blocks[i]) return;
+        setValue(lineInput(blocks[i], 'price'), l.price);
+        setValue(lineInput(blocks[i], 'total'), l.total);
+        setValue(lineInput(blocks[i], 'vatRate'), l.vatRate);
+      });
+    });
+    checksBox.append(btn);
+  }
 }
 
 function wireLineBlock(block) {
