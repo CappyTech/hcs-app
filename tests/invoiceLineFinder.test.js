@@ -164,14 +164,14 @@ describe('line items', () => {
   it('an amount column headed "Value ex VAT", with a Terms column and wrapped descriptions', () => {
     const lines = findLines(page([
       ['QUANTITY', 40, 600, 40, 8], ['DESCRIPTION', 90, 600, 50, 8], ['PRICE', 340, 600, 24, 8], ['TERMS', 380, 600, 26, 8], ['VALUE ex VAT', 450, 600, 52, 8],
-      ['1', 50, 585, 4, 8], ['110mm Sample Bend 87.5deg', 92, 585, 120, 8], ['8.47', 342, 585, 18, 8], ['8.47', 480, 585, 18, 8],
-      ['Spec 1401-1', 92, 576, 50, 8],
-      ['2', 50, 562, 4, 8], ['25kg Sample Bag', 92, 562, 80, 8], ['4.30', 342, 562, 18, 8], ['8.60', 480, 562, 18, 8],
-      ['Total Goods (Excl VAT)', 300, 500, 90, 8], ['17.07', 480, 500, 22, 8],
+      ['1', 50, 585, 4, 8], ['110mm Sample Bend', 92, 585, 120, 8], ['9.20', 342, 585, 18, 8], ['9.20', 480, 585, 18, 8],
+      ['Sample spec', 92, 576, 50, 8],
+      ['2', 50, 562, 4, 8], ['25kg Sample Bag', 92, 562, 80, 8], ['3.50', 342, 562, 18, 8], ['7.00', 480, 562, 18, 8],
+      ['Total Goods (Excl VAT)', 300, 500, 90, 8], ['16.20', 480, 500, 22, 8],
     ]));
     assert.deepEqual(lines.map((l) => [l.description, l.quantity, l.price, l.total]), [
-      ['110mm Sample Bend 87.5deg Spec 1401-1', 1, 8.47, 8.47],
-      ['25kg Sample Bag', 2, 4.3, 8.6],
+      ['110mm Sample Bend Sample spec', 1, 9.2, 9.2],
+      ['25kg Sample Bag', 2, 3.5, 7],
     ]);
   });
 
@@ -183,6 +183,81 @@ describe('line items', () => {
     for (const h of ['Value ex VAT', 'Amount (excl. VAT)', 'Net Excluding VAT', 'Total inc VAT', 'Value (incl VAT)']) {
       assert.deepEqual(head(h).map((l) => l.total), [12], h);
     }
+  });
+
+  it('a "VAT" or "Tax" column holding the rate ("20%", "20.0%") is a rate, not an amount', () => {
+    for (const rate of ['20%', '20.0%']) {
+      const lines = findLines(page([
+        ['Description', 36, 600, 48, 9], ['Quantity', 345, 600, 35, 9], ['Price', 419, 600, 21, 9], ['Tax', 485, 600, 15, 9], ['Amount', 528, 600, 32, 9],
+        ['Sample bolts', 36, 585, 60, 9], ['2', 375, 585, 5, 9], ['12.50', 417, 585, 23, 9], [rate, 481, 585, 19, 9], ['25.00', 536, 585, 24, 9],
+      ]));
+      assert.deepEqual(lines.map((l) => [l.total, l.vatRate]), [[25, 20]], rate);
+    }
+  });
+
+  it('a VAT column of plain "20.00" is the rate when it isn\'t 20% of the line as an amount', () => {
+    const lines = findLines(page([
+      ['Description', 103, 600, 60, 8], ['Qty', 400, 600, 18, 8], ['Price', 435, 600, 24, 8], ['Value', 483, 600, 27, 8], ['VAT', 532, 600, 16, 8],
+      ['Sample sand', 103, 585, 80, 8], ['5', 415, 585, 4, 8], ['3.10', 448, 585, 16, 8], ['15.50', 498, 585, 20, 8], ['20.00', 531, 585, 20, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.total, l.vatRate]), [[15.5, 20]]);
+  });
+
+  it('a VAT amount that isn\'t a standard rate of the line gives no rate, not a made-up one', () => {
+    const lines = findLines(page([
+      ['Description', 36, 600, 48, 9], ['Qty', 345, 600, 15, 9], ['Price', 419, 600, 21, 9], ['VAT', 485, 600, 15, 9], ['Amount', 528, 600, 32, 9],
+      ['Sample item', 36, 585, 60, 9], ['1', 375, 585, 5, 9], ['10.00', 417, 585, 23, 9], ['3.33', 481, 585, 19, 9], ['10.00', 536, 585, 24, 9],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.total, l.vatRate]), [[10, null]]);
+  });
+
+  it('"Net Subtotal (£)" is the amount column', () => {
+    const lines = findLines(page([
+      ['QUANTITY', 28, 568, 40, 8], ['DETAILS', 93, 568, 32, 8], ['UNIT PRICE (£)', 404, 568, 58, 8], ['VAT', 472, 568, 14, 8], ['NET SUBTOTAL (£)', 494, 568, 72, 8],
+      ['1', 40, 533, 4, 9], ['Sample tree work', 93, 533, 100, 9], ['500.00', 438, 533, 25, 9], ['20%', 470, 533, 17, 9], ['500.00', 541, 533, 26, 9],
+      ['Net Total', 453, 474, 34, 9], ['500.00', 541, 474, 26, 9],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.total, l.vatRate]), [['Sample tree work', 500, 20]]);
+  });
+
+  it('a table with no amount column: each total is quantity × price', () => {
+    const lines = findLines(page([
+      ['Quantity', 32, 550, 37, 10], ['Details', 106, 550, 30, 10], ['Unit Price', 424, 550, 43, 10], ['VAT', 515, 550, 19, 10],
+      ['3.00', 36, 529, 19, 10], ['Sample skip hire', 106, 529, 100, 10], ['40.00', 429, 529, 31, 10], ['24.00', 502, 529, 25, 10],
+      ['Delivered', 106, 518, 50, 10],
+      ['Total Net', 370, 159, 42, 10], ['120.00', 503, 159, 31, 10],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.quantity, l.price, l.total, l.vatRate]), [['Sample skip hire Delivered', 3, 40, 120, 20]]);
+  });
+
+  it('items set over two rows, with wide gaps between them, are all read', () => {
+    const lines = findLines(page([
+      ['ITEM CODE', 43, 592, 45, 8], ['DESCRIPTION OF GOODS', 185, 592, 100, 8], ['QUANTITY', 378, 592, 41, 8], ['PRICE', 435, 592, 24, 8], ['VALUE', 483, 592, 27, 8], ['VAT', 532, 592, 16, 8],
+      ['100001', 39, 558, 26, 8], ['SAMPLE HOPPER', 103, 558, 120, 8], ['1', 415, 558, 4, 8], ['28.00', 444, 558, 20, 8], ['28.00', 498, 558, 20, 8], ['20.00', 531, 558, 20, 8],
+      ['EACH', 397, 549, 22, 8], ['EACH', 442, 549, 22, 8],
+      ['100002', 39, 512, 26, 8], ['SAMPLE COUPLER', 103, 512, 120, 8], ['1', 415, 512, 4, 8], ['6.50', 448, 512, 16, 8], ['6.50', 503, 512, 15, 8], ['20.00', 531, 512, 20, 8],
+      ['EACH', 397, 503, 22, 8], ['EACH', 442, 503, 22, 8],
+      ['GOODS AMOUNT', 377, 408, 67, 8], ['£34.50', 527, 408, 24, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.code, l.total, l.vatRate]), [['SAMPLE HOPPER', '100001', 28, 20], ['SAMPLE COUPLER', '100002', 6.5, 20]]);
+  });
+
+  it('a VAT summary after a gap below the lines is not another line', () => {
+    const lines = findLines(page([
+      ['Description', 32, 544, 50, 9], ['Qty/Hrs', 409, 544, 32, 9], ['Price/Rate', 456, 544, 40, 9], ['Net', 549, 544, 14, 9],
+      ['Sample topsoil', 32, 529, 150, 9], ['1.00', 424, 529, 17, 9], ['30.00', 478, 529, 22, 9], ['30.00', 541, 529, 22, 9],
+      ['VAT Rate', 32, 485, 40, 9], ['Net', 272, 485, 15, 9], ['VAT', 330, 485, 18, 9], ['Total Net', 413, 485, 37, 9], ['30.00', 537, 485, 22, 9],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.total]), [['Sample topsoil', 30]]);
+  });
+
+  it('a description set flush left, under the quantity heading, is still the description', () => {
+    const lines = findLines(page([
+      ['QUANTITY', 29, 379, 52, 11.8], ['DESCRIPTION', 108, 379, 67, 11.8], ['PRICE', 367, 379, 29, 11.8], ['TERMS', 432, 379, 34, 11.8], ['VALUE ex VAT', 518, 379, 72, 11.8],
+      ['30', 45, 355, 13, 9.6], ['Sample Timber Batten Long Length', 75, 355, 229, 9.6], ['1.20 Per Metre', 369, 355, 85, 9.6], ['36.00', 525, 355, 31, 9.6],
+      ['Total Goods (Excl VAT)', 360, 70, 110, 11.8], ['36.00', 525, 70, 31, 11.8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.quantity, l.total]), [['Sample Timber Batten Long Length', 30, 36]]);
   });
 
   it('a hire invoice: Date From / Date To / Description / Value, a section title in between', () => {
