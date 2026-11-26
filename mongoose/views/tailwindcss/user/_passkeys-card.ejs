@@ -1,0 +1,77 @@
+<%#
+  Passkeys card for Account Settings (included by account.ejs, above the
+  TOTP card). Locals: user (with passkeys[]), twoFARequired.
+  Adding runs through public/js/passkeys.js (form[data-passkey-register]);
+  removing is a plain form post that asks for the password.
+%>
+<% const _passkeys = Array.isArray(user.passkeys) ? user.passkeys : []; %>
+<% const _input = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500'; %>
+<div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden" id="passkeys">
+  <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+  <div class="p-6 sm:p-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">Passkeys</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">
+      Sign in with your fingerprint, face or device PIN instead of a password and code.
+      A passkey counts as two-factor sign-in.
+    </p>
+
+    <% if (_passkeys.length) { %>
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-4">
+        <% _passkeys.forEach(p => { %>
+          <li class="px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 dark:text-gray-100 truncate">
+                  <i class="bi bi-fingerprint text-green-600 dark:text-green-400 mr-1" aria-hidden="true"></i><%= p.name || 'Passkey' %>
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Added <%= p.createdAt ? slimDateTime(p.createdAt) : '—' %>
+                  · Last used <%= p.lastUsedAt ? slimDateTime(p.lastUsedAt, ['includeTime']) : 'never' %>
+                  <% if (p.backedUp) { %>· Synced<% } %>
+                </p>
+              </div>
+              <details class="shrink-0 text-right">
+                <summary class="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline list-none">Remove</summary>
+                <form action="/user/account/passkeys/remove" method="POST" class="mt-2 w-56 text-left space-y-2">
+                  <%- include('../partials/csrfHidden.ejs') %>
+                  <input type="hidden" name="credentialId" value="<%= p.credentialId %>">
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    Your password
+                    <input type="password" name="confirmPassword" required autocomplete="current-password" class="<%= _input %> mt-1 text-sm py-2">
+                  </label>
+                  <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
+                    data-confirm="Remove this passkey? You won't be able to sign in with it any more.">
+                    <i class="bi bi-trash" aria-hidden="true"></i> Remove passkey
+                  </button>
+                </form>
+              </details>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">You have no passkeys yet.</p>
+    <% } %>
+
+    <div data-passkey-block hidden>
+      <form data-passkey-register class="space-y-3" action="#" method="POST">
+        <label for="passkeyName" class="block font-medium">Name this passkey</label>
+        <input type="text" id="passkeyName" name="name" maxlength="60" placeholder="e.g. Work laptop, iPhone" class="<%= _input %>">
+        <div class="flex justify-center">
+          <button type="submit" class="w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm disabled:opacity-60">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add a passkey
+          </button>
+        </div>
+        <p data-passkey-error hidden role="alert" class="text-sm text-red-600 dark:text-red-400 text-center"></p>
+      </form>
+    </div>
+    <p data-passkey-unsupported hidden class="text-sm text-amber-700 dark:text-amber-300 text-center">
+      This browser can't create passkeys. Open this page in an up-to-date browser to add one.
+    </p>
+    <% if (_passkeys.length) { %>
+      <p class="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+        With a passkey on your account, signing in with your password also asks for the passkey (or your authenticator code, if set up below).
+      </p>
+    <% } %>
+  </div>
+</div>

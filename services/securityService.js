@@ -188,12 +188,14 @@ function generateNonce(_req, res, next) {
 // here. Everything this app never asks for is denied outright; a feature name a
 // browser does not know is ignored, so listing more costs nothing.
 //
-// Two entries are deliberately NOT `()`:
+// Some entries are deliberately NOT `()`:
 //   - `clipboard-write` is absent, i.e. left at its default of `self`. The
 //     admin log viewer copies with `navigator.clipboard`, and denying it there
 //     would break a working control to satisfy a scanner.
 //   - `fullscreen=(self)` rather than `()`, because it is the one feature a
 //     bundled widget may reach for on a table or chart without us calling it.
+//   - `publickey-credentials-create/get=(self)` for passkeys (passkeyService):
+//     adding one in Account Settings and signing in with one.
 const PERMISSIONS_POLICY = [
   "accelerometer=()",
   "autoplay=()",
@@ -210,12 +212,13 @@ const PERMISSIONS_POLICY = [
   "microphone=()",
   "midi=()",
   "payment=()",
-  "publickey-credentials-get=()",
   "screen-wake-lock=()",
   "serial=()",
   "usb=()",
   "xr-spatial-tracking=()",
   "fullscreen=(self)",
+  "publickey-credentials-create=(self)",
+  "publickey-credentials-get=(self)",
 ].join(", ");
 
 function permissionsPolicy(_req, res, next) {

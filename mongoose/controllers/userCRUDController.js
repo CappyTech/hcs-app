@@ -11,6 +11,7 @@ import auditLog from '../../services/auditLogService.js';
 import microsoftSsoService from '../../services/microsoftSsoService.js';
 import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
+import { hasPasskeys } from '../../services/passkeyService.js';
 import passwordResetDraft from '../../services/passwordResetDraft.js';
 import turnstile from '../../services/turnstileService.js';
 import { allSessionCookieNames, sessionCookieName } from '../../services/cookieNameService.js';
@@ -299,7 +300,7 @@ export const loginUser = async (req, res) => {
     }
     auditLog.record("login_success", req, {
       userId: user._id, username: user.username,
-      meta: { twoFactor: !!user.totpEnabled },
+      meta: { twoFactor: !!user.totpEnabled || hasPasskeys(user) },
     });
 
     const sessionData = {
@@ -319,9 +320,11 @@ export const loginUser = async (req, res) => {
       },
     };
 
-    // If TOTP is enabled, try the inline code first; fall back to /user/2fa
-    if (user.totpEnabled) {
-      const inlineTotp = String(req.body.totp || "").trim();
+    // A second step is needed when the account has a passkey or TOTP. The
+    // inline TOTP code is tried first when given; otherwise /user/2fa, which
+    // offers the passkey before the authenticator code.
+    if (user.totpEnabled || hasPasskeys(user)) {
+      const inlineTotp = user.totpEnabled ? String(req.body.totp || "").trim() : "";
       if (inlineTotp) {
         const decryptedSecret = encryptionService.decrypt(user.totpSecret);
         let totpValid = totpService.verifyTOTP(decryptedSecret, inlineTotp);

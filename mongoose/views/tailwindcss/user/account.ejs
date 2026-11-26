@@ -11,18 +11,20 @@
 
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-  <!-- LEFT: TOTP Section -->
+  <!-- LEFT: Passkeys, then TOTP -->
+  <div class="space-y-6">
+  <%- include('./_passkeys-card.ejs') %>
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
     <div class="p-6 sm:p-8">
     <div>
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-4">Two-Factor Authentication (TOTP)</h2>
 
-      <% if (!user.totpEnabled && typeof twoFARequired !== 'undefined' && twoFARequired) { %>
+      <% if (!user.totpEnabled && !(Array.isArray(user.passkeys) && user.passkeys.length) && typeof twoFARequired !== 'undefined' && twoFARequired) { %>
         <div class="mb-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
           <i class="bi bi-exclamation-triangle-fill mr-1"></i>
           Your role (<strong class="capitalize"><%= (typeof twoFARoleLabel !== 'undefined' && twoFARoleLabel) || user.role %></strong>) requires two-factor authentication.
-          You must enable it below before you can use the rest of the platform.
+          Add a passkey above or set up an authenticator app below before you can use the rest of the platform.
         </div>
       <% } %>
 
@@ -92,6 +94,7 @@
       </form>
     <% } %>
     </div>
+  </div>
   </div>
 
   <!-- RIGHT: Account Details + Change Password -->
