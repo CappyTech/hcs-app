@@ -46,12 +46,21 @@ function lockedMessage(user) {
 }
 
 // ── 1. Sign in with a passkey (login page) ─────────────────────────────────
+// Two requests can be open on the login page at once: the browser's autofill
+// list under the username box (`mode: 'autofill'`, conditional mediation) and
+// the "Sign in with a passkey" button. Each keeps its own challenge so one
+// doesn't overwrite the other's.
+
+function loginKey(mode) {
+  return mode === 'autofill' ? 'passkeyAutofill' : 'passkeyLogin';
+}
 
 export const loginOptions = async (req, res) => {
   try {
     if (req.session.user) return fail(res, 400, 'You are already signed in.');
-    const options = await passkeys.authenticationOptions(req, { key: 'passkeyLogin' });
-    req.session.passkeyLogin.next = getSafeNext(req.body?.next);
+    const key = loginKey(req.body?.mode);
+    const options = await passkeys.authenticationOptions(req, { key });
+    req.session[key].next = getSafeNext(req.body?.next);
     return res.json({ ok: true, options });
   } catch (err) {
     logger.error(`[passkey] login options failed: ${err.message}`);
@@ -60,11 +69,12 @@ export const loginOptions = async (req, res) => {
 };
 
 export const loginVerify = async (req, res) => {
-  const next = getSafeNext(req.session?.passkeyLogin?.next);
+  const key = loginKey(req.body?.mode);
+  const next = getSafeNext(req.session?.[key]?.next);
   let user = null;
   try {
     const result = await passkeys.verifyAuthentication(req, {
-      key: 'passkeyLogin',
+      key,
       response: req.body?.response,
       findUser: findByCredential,
     });
@@ -75,6 +85,8 @@ export const loginVerify = async (req, res) => {
     user.loginAttempts = 0;
     user.lockedUntil = null;
     await user.save();
+    delete req.session.passkeyLogin;
+    delete req.session.passkeyAutofill;
 
     auditLog.record('login_success', req, {
       userId: user._id, username: user.username,

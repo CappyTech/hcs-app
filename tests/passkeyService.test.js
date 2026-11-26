@@ -222,6 +222,22 @@ describe('passkeyService register → sign in', () => {
     }), /different account/);
   });
 
+  it('keeps the autofill and button challenges apart', async () => {
+    const { req, user, auth } = await registered();
+    const autofillOpts = await passkeys.authenticationOptions(req, { key: 'passkeyAutofill' });
+    const buttonOpts = await passkeys.authenticationOptions(req, { key: 'passkeyLogin' });
+    assert.notEqual(autofillOpts.challenge, buttonOpts.challenge);
+    // The autofill answer still verifies after the button asked for its own challenge…
+    const out = await passkeys.verifyAuthentication(req, {
+      key: 'passkeyAutofill', response: auth.assert(autofillOpts, origin), findUser: async () => user,
+    });
+    assert.equal(out.user, user);
+    // …and an answer to one challenge is refused under the other key.
+    await assert.rejects(() => passkeys.verifyAuthentication(req, {
+      key: 'passkeyLogin', response: auth.assert(autofillOpts, origin), findUser: async () => user,
+    }));
+  });
+
   it('refuses an unknown credential', async () => {
     const { req, auth } = await registered();
     const opts = await passkeys.authenticationOptions(req, { key: 'passkeyLogin' });
