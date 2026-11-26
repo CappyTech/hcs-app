@@ -22,12 +22,12 @@ const COLUMN_TYPES = [
   ['discount', /^disc(ount)?\.?(\s*(amt|amount|%|value))?$/i],
   ['price', /^(unit\s*)?(price|rate|cost)(\s*\/\s*rate)?(\s*(£|gbp))?$|^each$|^price\s*each$/i],
   ['qty', /^(qty|quantity|qty\s*\/\s*hrs|hrs|hours|no\.?\s*of\s*units)$/i],
-  ['net', /^(net(\s*(amt|amount|value|total))?|goods(\s*value)?|amount(\s*(gbp|£))?|amt|line\s*total|totals?(\s*net)?|value|charge|sub\s*-?\s*total)$/i],
+  ['net', /^(net(\s*(amt|amount|value|total))?|goods(\s*value)?|amount(\s*(gbp|£))?|amt|line\s*total|totals?(\s*net)?|value|charge|(net\s*)?sub\s*-?\s*total)$/i],
   ['gross', /^gross(\s*(amt|amount|value))?$/i],
   ['uom', /^(unit|uom|per)$/i],
   ['code', /^((part|item|stock|product)\s*(no\.?|code|number|#)|code|ref(erence)?|sku|line)$/i],
   ['date', /^(date|date\s*(from|to)|from|to|period)$/i],
-  ['desc', /^(description|details|particulars|product|parts|items?|service|narrative|labou?r|materials|hire|charges)$/i],
+  ['desc', /^(description(\s*of\s*(goods|works?|services))?|details|particulars|product|parts|items?|service|narrative|labou?r|materials|hire|charges)$/i],
 ];
 // "Unit Price (£)", "Subtotal (GBP)": the currency is only a label.
 // "Value ex VAT", "Amount (excl. VAT)": net is what the plain name means anyway.
@@ -107,29 +107,53 @@ function headingAt(rows, ri) {
     const types = new Set(cols.map((c) => c.type).filter(Boolean));
     const hasAmount = types.has('net') || types.has('gross');
     // A hire invoice may have only "Description" and "Value", and a labour
-    // table only "Labour" and "Amount", so price and qty are optional
-    const ok = hasAmount && (types.has('desc') || (types.has('code') && cols.length >= 3));
+    // table only "Labour" and "Amount", so price and qty are optional. A table
+    // with no amount column at all ("Quantity  Details  Unit Price  VAT") is
+    // still lines when it has a quantity and a price: each total is qty × price.
+    // Only when every heading is known, so a row above a real heading ("Page 1
+    // of 1" over "Value", making one unknown column) isn't taken for it.
+    const ok = (hasAmount && (types.has('desc') || (types.has('code') && cols.length >= 3)))
+      || (!hasAmount && types.has('desc') && types.has('qty') && types.has('price') && cols.every((c) => c.type));
     if (ok && (!best || types.size > best.types.size)) best = { cols, types, rows: span, y: group.at(-1).y, h: rows[ri].h };
   }
   return best;
 }
 
-/** Which column a cell belongs to: numbers by their centre, words by their left edge. */
+/**
+ * Which column a cell belongs to: numbers by their centre, words by their left
+ * edge. Words that start left of the description heading but run on across it
+ * are the description (set flush left, under "Quantity" or "Item code").
+ */
 function columnFor(cols, it) {
   const isNum = parseNumber(it.str) != null || /^[A-Z]$/.test(it.str.trim());
+  if (!isNum) {
+    const desc = cols.find((c) => c.type === 'desc');
+    if (desc && it.x < desc.x - 3 && it.x + it.w > desc.x + 3) return desc;
+  }
   const at = isNum ? it.x + it.w / 2 : it.x + 1;
   let idx = 0;
   for (let i = 0; i < cols.length; i++) if (at >= cols[i].x - 3) idx = i;
   return cols[idx];
 }
 
-/** The line's VAT rate, from a rate/code cell or from VAT amount ÷ net. */
+/**
+ * The line's VAT rate, from a rate/code cell or from VAT amount ÷ net. A
+ * column headed just "VAT" or "Tax" often holds the rate, not an amount
+ * ("20%", "20.0%", or "20.00" under a "VAT %" split over two
+ * rows), so a figure with % is a rate, and so is a standard rate when
+ * amount ÷ net isn't one. Otherwise no rate: fillMissingRates takes the
+ * invoice's own, rather than a nonsense 168%.
+ */
 function vatRateOf(cells, net) {
-  const amount = cells.vatAmount != null ? parseMoney(cells.vatAmount) ?? parseNumber(cells.vatAmount) : null;
-  if (amount != null && net) {
-    const r = (Number(amount) / net) * 100;
-    const snap = STANDARD_RATES.find((s) => Math.abs(s - r) < 1);
-    return snap ?? Math.round(r);
+  const vatCell = (cells.vatAmount || '').trim();
+  if (vatCell && !/%\s*$/.test(vatCell)) {
+    const amount = parseMoney(vatCell) ?? parseNumber(vatCell);
+    if (amount != null && net) {
+      const r = (Number(amount) / net) * 100;
+      const snap = STANDARD_RATES.find((s) => Math.abs(s - r) < 1);
+      if (snap != null) return snap;
+      return STANDARD_RATES.includes(Number(amount)) ? Number(amount) : null;
+    }
   }
   // A rate column, or a "VAT" column holding codes (Stark prints "S")
   const raw = (cells.vatRate || cells.vatAmount || '').trim();
@@ -236,13 +260,24 @@ function endsTable(row) {
 function readTable(rows, start, head) {
   const { cols } = head;
   const amountCol = cols.filter((c) => c.type === 'net' || c.type === 'gross').sort((a, b) => amountRank(a) - amountRank(b))[0];
+  // A line's figures: a quantity or price, and an amount (when there's an amount
+  // column). A VAT summary under the table has an amount but no quantity or price.
+  const isFigure = (it) => parseMoney(it.str) != null || parseNumber(it.str) != null;
+  const hasFigure = (row) => {
+    const at = row.items.filter(isFigure).map((it) => columnFor(cols, it).type);
+    return at.some((t) => t === 'qty' || t === 'price') && (!amountCol || row.items.some((it) => isFigure(it) && columnFor(cols, it) === amountCol));
+  };
   const parsed = [];
   let lastY = head.y;
   let r = start;
   for (; r < rows.length; r++) {
     const row = rows[r];
     if (row.page !== rows[start - 1].page) break;
-    if (lastY - row.y > Math.max(head.h, row.h) * 4.5) break;
+    // A big gap ends the table, unless the row has a line's figures: items set
+    // over two rows ("BAG" / "EACH" under the figures) leave wide spaces
+    const gap = lastY - row.y;
+    const lineHeight = Math.max(head.h, row.h);
+    if (gap > lineHeight * 4.5 && !(gap <= lineHeight * 8 && hasFigure(row))) break;
     if (startsLabel(row.items[0].str) || /^\s*(sub[\s-]?total|totals?|carriage|vat\s*summary|total\s*(goods|net))\b/i.test(row.items[0].str)) break;
     // The reverse charge note under the lines ("Reverse VAT - 20%", then
     // "Customer to account to HMRC…") isn't more of the last line's description
@@ -261,7 +296,13 @@ function readTable(rows, start, head) {
       else if (col.type === 'code') code.push(it.str);
       else if (col.type && col.type !== 'date') cells[col === amountCol ? 'amount' : col.type] = ((cells[col === amountCol ? 'amount' : col.type] || '') + ' ' + it.str).trim();
     }
-    const amount = cells.amount != null ? parseMoney(cells.amount) ?? (parseNumber(cells.amount) != null ? parseNumber(cells.amount).toFixed(2) : null) : null;
+    let amount = cells.amount != null ? parseMoney(cells.amount) ?? (parseNumber(cells.amount) != null ? parseNumber(cells.amount).toFixed(2) : null) : null;
+    // No amount column: quantity × price
+    if (!amountCol) {
+      const q = cells.qty != null ? parseNumber(cells.qty) : null;
+      const pr = cells.price != null ? parseMoney(cells.price) ?? parseNumber(cells.price) : null;
+      amount = q != null && pr != null ? (Math.round(q * Number(pr) * 100) / 100).toFixed(2) : null;
+    }
     parsed.push({ row, cells, text: cleanText(text.join(' ')), code: cleanText(code.join(' ')), amount });
   }
 

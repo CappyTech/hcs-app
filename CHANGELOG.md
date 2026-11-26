@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.154.4] - 2026-11-26
+
+### Fixed
+- **Line VAT rates are read properly from a "VAT" or "Tax" column that holds the rate.** These columns often print the rate ("20%", "20.0%", or "20.00"), but the reader took it as a VAT amount and divided it by the line's net. That gave rates like 96% or 168% on many invoices. A figure with "%" is now a rate. So is a standard rate (0, 5 or 20) when amount ÷ net isn't one. Anything else gives no rate, so the invoice's own rate from its totals is used instead.
+- **More line tables are read:**
+  - "Net Subtotal" counts as the amount column.
+  - "Description of goods" (or works or services) counts as the description heading, so item codes stay out of the description.
+  - A table with no amount column at all (Quantity / Details / Unit Price / VAT) is read, with each total worked out as quantity × price.
+  - Descriptions set flush left, starting under the Quantity heading, are kept as the description, so the line is no longer dropped.
+- **Items set over two rows no longer cut the table short.** A gap of more than 4.5 lines used to end the table. A row further down still counts when it has a line's figures (a quantity or price, and an amount), up to 8 lines down. A VAT summary under the table has no quantity or price, so it isn't taken for another line.
+- Checked against every saved invoice before release: more line totals and VAT rates match what was saved, and none read worse.
+
 ## [6.154.3] - 2026-11-26
 
 ### Fixed
