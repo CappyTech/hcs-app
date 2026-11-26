@@ -1,5 +1,5 @@
 /**
- * Service worker for the HCS ERP.
+ * Service worker for hcs-app.
  *
  * Served from the site root so its scope is "/". Registering it from /resources/js/
  * (as this app did previously) scopes it to /resources/js/, where it can never
@@ -26,14 +26,14 @@
 
 // Bump when the precache list or caching rules change; the activate handler deletes
 // every cache that does not match.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `hcs-static-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 // The offline page embeds this logo. It must be precached alongside the page: it is
 // otherwise only cached opportunistically, and the layout references it just as an
 // apple-touch-icon, which most browsers never request — so an offline device could
 // render the fallback page with a broken image.
-const OFFLINE_LOGO = '/resources/images/HCS-Logo-v5-Icon192.png';
+const OFFLINE_LOGO = '/brand/icon-192.png';
 
 // Kept minimal on purpose: anything listed here that 404s aborts the whole install.
 const PRECACHE = [OFFLINE_URL, OFFLINE_LOGO];
@@ -44,6 +44,7 @@ const STATIC_PREFIXES = [
   '/resources/js/',
   '/resources/vendor/',
   '/resources/images/',
+  '/brand/',
 ];
 
 self.addEventListener('install', (event) => {

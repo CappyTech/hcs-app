@@ -8,6 +8,11 @@ import cisCheck from '../mongoose/services/paperless/cisCheckService.js';
 import queues from '../mongoose/services/paperless/documentQueueService.js';
 import cisMappings from '../mongoose/config/cisMappings.js';
 
+// ChargeType ids are per KashFlow account and come from configuration.
+process.env.CIS_CHARGE_TYPE_MATERIALS = '9001';
+process.env.CIS_CHARGE_TYPE_LABOUR = '9002';
+process.env.CIS_CHARGE_TYPE_DEDUCTION = '9003';
+
 const require = createRequire(import.meta.url);
 const ejs = require('ejs');
 

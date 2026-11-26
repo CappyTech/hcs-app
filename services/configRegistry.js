@@ -117,6 +117,20 @@ export const GROUPS = [
         ],
         help: 'How wide the main content runs for people who have not picked their own on Account Settings. Unset means Standard.',
       },
+      {
+        key: 'BRAND_COLOUR', label: 'Brand colour', type: 'select',
+        options: [
+          { value: 'green', label: 'Green' },
+          { value: 'emerald', label: 'Emerald' },
+          { value: 'teal', label: 'Teal' },
+          { value: 'cyan', label: 'Cyan' },
+          { value: 'sky', label: 'Sky' },
+          { value: 'blue', label: 'Blue' },
+          { value: 'indigo', label: 'Indigo' },
+          { value: 'violet', label: 'Violet' },
+        ],
+        help: 'The main colour of buttons, links, the navigation and the app icon. Green is also how the app shows "approved" and "done", so only calm colours are offered. Unset means Green. The app icon itself is on Admin → Branding.',
+      },
     ],
   },
   {
@@ -154,6 +168,8 @@ export const GROUPS = [
       { key: 'PAPERLESS_CONCURRENCY', label: 'Concurrency', type: 'number', help: 'Documents processed in parallel during a grab. Default 5.' },
       { key: 'PAPERLESS_AUTOINGEST_DEBOUNCE_MS', label: 'List-page grab debounce (ms)', type: 'number', help: 'Opening the OCR list only triggers a grab if the last one finished longer ago than this. Default 600000 (10 minutes).' },
       { key: 'PAPERLESS_CF_CACHE_MS', label: 'Custom-field cache (ms)', type: 'number', restart: true, help: 'How long custom-field definitions are cached. Read once at import.' },
+      // Bank statements
+      { key: 'PAPERLESS_BANK_CORRESPONDENTS', label: 'Bank statement correspondents', type: 'text', help: 'Which KashFlow bank account each Paperless bank correspondent is, as comma-separated `<correspondent id>:<KashFlow bank account id>` pairs, e.g. `12:345678, 13:456789`. Used for a statement with no Bank Account ID custom field; blank means such a statement waits for someone to pick its account.' },
       // Diagnostics
       { key: 'PAPERLESS_VERBOSE', label: 'Verbose logging', type: 'boolean', help: 'Log every Paperless request and response body snippet.' },
     ],
@@ -206,6 +222,9 @@ export const GROUPS = [
       { key: 'KASHFLOW_DEBUG_SESSION', label: 'Debug session', type: 'boolean', help: 'Log the session handshake in detail.' },
       { key: 'KASHFLOW_DEFER_DEFAULTS', label: 'Defer defaults', type: 'boolean', help: 'Skip applying default values on create.' },
       { key: 'JOB_REGISTER_KASHFLOW_AUTO', label: 'Add Job Register quotes and jobs to KashFlow automatically', type: 'boolean', help: 'When on, a quote added in the Job Register is created in KashFlow (one line at its net value, 20% VAT, the usual sales nominal), and a won job gets its KashFlow project with its quotes put on it. Anything that fails is flashed and can be done with the Create quote / Create project buttons. Default off.' },
+      { key: 'CIS_CHARGE_TYPE_MATERIALS', label: 'CIS materials ChargeType', type: 'number', help: 'The ChargeType id KashFlow puts on purchase lines for subcontractor materials in this account. Blank: lines are split by nominal code only.' },
+      { key: 'CIS_CHARGE_TYPE_LABOUR', label: 'CIS labour ChargeType', type: 'number', help: 'The ChargeType id for subcontractor labour lines. Blank: by nominal code only.' },
+      { key: 'CIS_CHARGE_TYPE_DEDUCTION', label: 'CIS deduction ChargeType', type: 'number', help: 'The ChargeType id for CIS deduction lines. Blank: by nominal code only.' },
       { key: 'NOTIFY_EMAIL', label: 'Project alert email', type: 'email', help: 'Gets the "projects below income target" alert from the KashFlow project check. Blank sends it to the SMTP From address.' },
     ],
   },

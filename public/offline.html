@@ -2,9 +2,10 @@
 <html lang="en">
 
 <head>
+  <!-- Template: served by brandService.offlineHtml(), which fills {{COMPANY_NAME}} and {{THEME_COLOUR}}. -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Offline — Heron Constructive Solutions</title>
+  <title>Offline — {{COMPANY_NAME}}</title>
   <link rel="icon" href="/resources/images/favicon.ico" type="image/x-icon">
   <!--
     Deliberately self-contained: this page is precached by the service worker and shown
@@ -39,13 +40,13 @@
       font: inherit;
       font-weight: 600;
       color: #fff;
-      background: #047857;
+      background: {{THEME_COLOUR}};
       border: 0;
       border-radius: .625rem;
       padding: .7rem 1.5rem;
       cursor: pointer;
     }
-    a.retry:hover { background: #065f46; }
+    a.retry:hover { filter: brightness(.9); }
     @media (prefers-color-scheme: dark) {
       body { background: #111827; color: #f3f4f6; }
       p { color: #9ca3af; }
@@ -55,7 +56,7 @@
 
 <body>
   <div class="card">
-    <img src="/resources/images/HCS-Logo-v5-Icon192.png" alt="Heron Constructive Solutions">
+    <img src="/brand/icon-192.png" alt="{{COMPANY_NAME}}">
     <h1>You're offline</h1>
     <p>
       This page needs a connection. Your work hasn't been lost — reconnect and try again.

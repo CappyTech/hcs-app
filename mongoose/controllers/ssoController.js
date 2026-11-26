@@ -80,13 +80,28 @@ function parseReturnTo(raw) {
   }
 }
 
-function isAllowedReturnTo(urlObj) {
-  const allowList = String(
-    process.env.HCS_SSO_RETURN_HOSTS || "sync.heroncs.co.uk",
-  )
+/**
+ * Hosts /sso/hcs-sync may send a browser back to: HCS_SSO_RETURN_HOSTS, or
+ * when that is unset, the host of HCS_SYNC_BASE_URL. Neither set means none,
+ * so the handoff refuses every return URL rather than trusting a default
+ * that would belong to some other company.
+ */
+export function ssoReturnHosts() {
+  const configured = String(process.env.HCS_SSO_RETURN_HOSTS || "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+  if (configured.length) return configured;
+  try {
+    const base = String(process.env.HCS_SYNC_BASE_URL || "").trim();
+    return base ? [new URL(base).hostname.toLowerCase()] : [];
+  } catch {
+    return [];
+  }
+}
+
+function isAllowedReturnTo(urlObj) {
+  const allowList = ssoReturnHosts();
 
   const host = String(urlObj.hostname || "").toLowerCase();
   if (!allowList.includes(host)) return false;
@@ -106,12 +121,7 @@ function upgradeReturnToToHttpsIfAllowed(urlObj) {
   // If the target host is allowlisted but proto is http (common when upstream
   // loses X-Forwarded-Proto), upgrade to https rather than rejecting.
   try {
-    const hostAllowList = String(
-      process.env.HCS_SSO_RETURN_HOSTS || "sync.heroncs.co.uk",
-    )
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
+    const hostAllowList = ssoReturnHosts();
     const host = String(urlObj.hostname || "").toLowerCase();
     const proto = String(urlObj.protocol || "").toLowerCase();
 
@@ -198,7 +208,7 @@ export const hcsSyncHandoff = async (req, res) => {
   ).trim();
 
   // Derive a shared parent domain when no explicit cookie domain is configured.
-  // e.g. app.heroncs.co.uk + sync.heroncs.co.uk → .heroncs.co.uk
+  // e.g. app.example.com + sync.example.com → .example.com
   let effectiveDomain = cookieDomain;
   if (!effectiveDomain) {
     try {
@@ -218,7 +228,7 @@ export const hcsSyncHandoff = async (req, res) => {
           common.unshift(appParts.pop());
           targetParts.pop();
         }
-        // Need at least a registrable domain (e.g. heroncs.co.uk → 3 labels)
+        // Need at least a registrable domain (e.g. example.co.uk → 3 labels)
         if (common.length >= 2) {
           effectiveDomain = "." + common.join(".");
           logger.info(

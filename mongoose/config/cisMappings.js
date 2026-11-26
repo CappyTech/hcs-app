@@ -1,16 +1,38 @@
+import configService from '../../services/configService.js';
+
 // Default nominal codes — used as fallback if DB lookup hasn't run yet
 const mappings = {
   materialsNominalCodes: [2700],
   labourNominalCodes: [5300],
   cisDeductionNominalCodes: [75600],
-
-  // KashFlow REST API ChargeType enum IDs for purchase line items
-  chargeTypes: {
-    materials: 18685896,
-    labour: 18685897,
-    cisDeduction: 18685964,
-  },
 };
+
+/**
+ * No ChargeType id can ever be. Unset ChargeTypes resolve to this rather than
+ * null, because a line whose ChargeType is null would otherwise compare equal
+ * to an unset one (`null === null`, and Mongo's `$eq` does the same).
+ */
+export const NO_CHARGE_TYPE = -1;
+
+const chargeType = (key) => {
+  const n = Number.parseInt(String(configService.get(key, '') ?? '').trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : NO_CHARGE_TYPE;
+};
+
+// KashFlow ChargeType ids for subcontractor purchase lines. They differ per
+// KashFlow account, so they come from configuration (Admin → Configuration →
+// KashFlow), read on every access so a change applies without a restart.
+// Unset, lines are classified by nominal code alone.
+Object.defineProperty(mappings, 'chargeTypes', {
+  enumerable: true,
+  get() {
+    return {
+      materials: chargeType('CIS_CHARGE_TYPE_MATERIALS'),
+      labour: chargeType('CIS_CHARGE_TYPE_LABOUR'),
+      cisDeduction: chargeType('CIS_CHARGE_TYPE_DEDUCTION'),
+    };
+  },
+});
 
 // Name patterns used to classify nominals into CIS categories
 const patterns = {

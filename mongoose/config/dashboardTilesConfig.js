@@ -87,6 +87,13 @@ export default {
         department: ['admin'],
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },
+    Branding: {
+        title: 'Branding',
+        description: 'The app icon and brand colour people see on every page, in the browser tab and on an installed app.',
+        link: '/admin/branding',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     EmailDashboard: {
         title: 'Email & Notifications',
         description: 'Manage notification types, compose emails to users, and view the delivery outbox.',

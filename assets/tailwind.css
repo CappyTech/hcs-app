@@ -8,6 +8,20 @@
     --brand: #047857;
     --brand-light: #10b981;
     --brand-dark: #065f46;
+    /* Primary palette behind every green-* class (tailwind.config.js), as
+       space-separated RGB. Tailwind's green; /brand/palette.css overrides it
+       with the company's BRAND_COLOUR. */
+    --brand-50: 240 253 244;
+    --brand-100: 220 252 231;
+    --brand-200: 187 247 208;
+    --brand-300: 134 239 172;
+    --brand-400: 74 222 128;
+    --brand-500: 34 197 94;
+    --brand-600: 22 163 74;
+    --brand-700: 21 128 61;
+    --brand-800: 22 101 52;
+    --brand-900: 20 83 45;
+    --brand-950: 5 46 22;
     /* Contrast-safe grays (see tailwind.config.js). Space-separated RGB so Tailwind's
        opacity modifiers (text-gray-400/50) keep working. */
     --hcs-gray-400: 99 106 119; /* #636a77: 5.4:1 on white, 4.95:1 on gray-100 (was #9ca3af, 2.5:1) */

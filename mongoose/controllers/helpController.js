@@ -454,11 +454,11 @@ const helpContent = [
         id: 'subcontractor-access',
         title: 'What Subcontractors Can Access',
         badge: 'Subcontractor',
-        description: 'Your account gives you access to your own records only. You can submit attendance, view your invoices from us, check your CIS deduction details, and manage vehicles assigned to you.',
+        description: 'Your account gives you access to your own records only. You can submit attendance, view the purchase invoices recorded against you, check your CIS deduction details, and manage vehicles assigned to you.',
         fields: [
           { name: 'Attendance', required: '', description: 'Submit, view, and track approval of your own attendance records.' },
           { name: 'Supplier Record', required: '', description: 'View your own supplier profile including contact details, CIS rate, and VAT number.' },
-          { name: 'Purchase Invoices', required: '', description: 'View all purchase invoices we have raised against your supplier account.' },
+          { name: 'Purchase Invoices', required: '', description: 'View all purchase invoices recorded against your supplier account.' },
           { name: 'CIS Returns', required: '', description: 'View your own CIS deduction summary for any tax month.' },
           { name: 'Vehicles', required: '', description: 'View and log mileage/fuel for any vehicle assigned to you.' },
         ],
@@ -729,7 +729,7 @@ const helpContent = [
         id: 'accident-book',
         title: 'Accident Book',
         badge: 'Everyone / Health & Safety',
-        description: 'Report injuries, near misses, dangerous occurrences, ill health and damage. Anyone working for us can report; only Health & Safety and admins can read the reports.',
+        description: 'Report injuries, near misses, dangerous occurrences, ill health and damage. Anyone who works for the company can report; only Health & Safety and admins can read the reports.',
         steps: [
           'If someone is seriously hurt, call 999 first.',
           'Go to /accident-report: there is a link at the top of the daily attendance page, and on the Health & Safety overview. Enter when and where it happened, what kind it was and who was hurt, describe what happened, and send it.',
@@ -1286,7 +1286,7 @@ const helpContent = [
         fields: [
           { name: 'Duplicate invoice', required: '', description: 'The invoice number is already in KashFlow for this supplier, or another document has the same number.' },
           { name: 'Supplier VAT number', required: '', description: 'The VAT number printed on the invoice belongs to a different supplier, which usually means the document was filed against the wrong one.' },
-          { name: 'May not be a valid invoice', required: '', description: 'Something an invoice legally needs seems to be missing: its number, a date, the supplier\'s address, our name and address, or a VAT number when VAT is charged. Without a VAT number, the VAT cannot be reclaimed.' },
+          { name: 'May not be a valid invoice', required: '', description: 'Something an invoice legally needs seems to be missing: its number, a date, the supplier\'s address, the company\'s name and address, or a VAT number when VAT is charged. Without a VAT number, the VAT cannot be reclaimed.' },
           { name: 'Totals', required: '', description: 'The lines do not add up to the goods total, the VAT does not match the line rates, or goods plus VAT is not the invoice total.' },
           { name: 'Paperless disagrees', required: '', description: 'When the form was filled from Paperless, any field where the PDF says something different is listed, with a Use button.' },
         ],
@@ -1636,7 +1636,7 @@ const helpContent = [
         fields: [
           { name: 'Fleet Overview', required: '', description: '/overview/fleet — Vehicles, Services, Fuel and Mileage. Each opens its own overview (/overview/vehicle, /overview/vehicleService, /overview/vehicleFuelLog, /overview/vehicleMileageLog): expired or due MOT/insurance/tax, vehicles off the road, booked services, fuel spend and claimable miles. Every figure opens the matching records.' },
           { name: 'Human Resources Overview', required: '', description: '/overview/human — summary of Employees, Holiday, Attendance and Tasks. Each figure opens the matching records; each section opens its own overview (/overview/employee, /overview/holiday, /overview/attendance, /overview/task). The Holiday overview shows requests to approve, who is on holiday today, current balances and upcoming bank and company holidays.' },
-          { name: 'Finance Overview', required: '', description: '/overview/finance — Invoices, Purchases, Customers, Suppliers, Subcontractors and Quotes, each with its own overview: what we are owed and owe, what is overdue, slow payers, quotes waiting on an answer. Every figure opens the matching records. Accessible to admin and accountant.' },
+          { name: 'Finance Overview', required: '', description: '/overview/finance — Invoices, Purchases, Customers, Suppliers, Subcontractors and Quotes, each with its own overview: what the company is owed and owes, what is overdue, slow payers, quotes waiting on an answer. Every figure opens the matching records. Accessible to admin and accountant.' },
           { name: 'Projects Overview', required: '', description: '/overview/projects — Contracts, Assignments and KashFlow projects, each with its own overview (/overview/contract, /overview/assignment, /overview/project): contracts past or near their end date, unstaffed assignments, projects below or meeting their income target. Run Financial Check and Mark Complete are on the KashFlow projects overview.' },
           { name: 'Admin Overview', required: '', description: '/overview/admin — Users overview (/overview/user): accounts waiting for a role, unverified email, users without two-factor sign-in, accounts idle for 90 days, and signed-in sessions.' },
           { name: 'Documents Overview', required: '', description: '/overview/documents — unlinked OCR documents and recent Paperless-ngx ingest activity.' },

@@ -8,12 +8,12 @@
     <%= typeof title !== 'undefined' ? title : (typeof companyName !== 'undefined' && companyName ? companyName + ' — Management System' : 'Management System') %>
   </title>
 
-  <link rel="icon" href="/resources/images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="<%= locals.brand ? brand.favicon : '/brand/icon-32.png' %>" type="image/png">
   <!-- Served from the site root, outside authentication: the browser fetches the
        manifest while logged out, which is when installability is decided. -->
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/resources/images/HCS-Logo-v5-Icon192.png">
-  <meta name="theme-color" content="#047857">
+  <link rel="apple-touch-icon" href="<%= locals.brand ? brand.touchIcon : '/brand/icon-180.png' %>">
+  <meta name="theme-color" content="<%= locals.brand ? brand.themeColour : '#15803d' %>">
 
   <!-- Prevent theme flash: set initial theme class and base background before CSS loads -->
   <script nonce="<%= locals.cspNonce %>">
@@ -65,6 +65,8 @@
 
   <!-- Compiled Tailwind CSS -->
   <link rel="stylesheet" href="/resources/css/tailwind.css">
+  <%# Brand palette: after tailwind.css so its --brand-* values win. %>
+  <link rel="stylesheet" href="<%= locals.brand ? brand.palette : '/brand/palette.css' %>">
 
   <!-- Bootstrap Icons (self-hosted — the nav is icon-driven, so a CDN failure would
        leave staff on poor site connections with an unusable navigation) -->

@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import brand from '../services/brandService.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 const layout = read('mongoose/views/tailwindcss/layout.ejs');
-const manifest = JSON.parse(read('public/manifest/manifest.json'));
+// The manifest is rendered per company by brandService, not a shipped file.
+const manifest = brand.manifest();
 
 describe('PWA wiring', () => {
   it('serves the service worker from the site root', () => {
@@ -51,12 +53,21 @@ describe('PWA wiring', () => {
     }
   });
 
-  it('ships every icon file the manifest references', () => {
+  it('serves every icon the manifest references from the brand routes', () => {
     const shortcutIcons = (manifest.shortcuts || []).flatMap((s) => s.icons || []);
     for (const icon of [...manifest.icons, ...shortcutIcons]) {
-      const rel = icon.src.replace('/resources/images/', 'public/images/');
-      assert.ok(fs.existsSync(path.join(ROOT, rel)), `missing icon file: ${icon.src}`);
+      const m = icon.src.match(/^\/brand\/(?:icon-(\d+)|maskable-512)\.png(\?v=.+)?$/);
+      assert.ok(m, `icon ${icon.src} is not a /brand/ icon`);
+      if (m[1]) assert.ok(brand.ICON_SIZES.includes(Number(m[1])), `${icon.src} is not a served size`);
+      assert.equal(icon.sizes, `${m[1] || 512}x${m[1] || 512}`, `${icon.src} declares the wrong size`);
     }
+  });
+
+  it('names no company in the shipped PWA files', () => {
+    for (const f of ['public/offline.html', 'public/service-worker.js']) {
+      assert.ok(!/heron/i.test(read(f)), `${f} names a company`);
+    }
+    assert.ok(!fs.existsSync(path.join(ROOT, 'public/manifest/manifest.json')), 'the static manifest must not come back');
   });
 
   it('does not cache page HTML in the service worker', () => {
@@ -99,8 +110,7 @@ describe('PWA wiring', () => {
     assert.ok(embedded.length > 0, 'offline page should embed the logo');
     for (const src of embedded) {
       assert.ok(sw.includes(src), `${src} is embedded in offline.html but not precached`);
-      const rel = src.replace('/resources/images/', 'public/images/');
-      assert.ok(fs.existsSync(path.join(ROOT, rel)), `missing file: ${src}`);
+      assert.match(src, /^\/brand\/icon-\d+\.png$/, `${src} should be an unversioned /brand/ icon`);
     }
   });
 });

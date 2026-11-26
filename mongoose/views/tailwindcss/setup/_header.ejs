@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title || 'Application Setup' %></title>
   <link rel="stylesheet" href="/resources/css/tailwind.css">
+  <link rel="stylesheet" href="<%= locals.brand ? brand.palette : '/brand/palette.css' %>">
   <link href="/resources/vendor/bootstrap-icons.min.css" rel="stylesheet">
   <script nonce="<%= locals.cspNonce %>">
     (function () {

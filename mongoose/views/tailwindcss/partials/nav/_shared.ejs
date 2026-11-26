@@ -14,7 +14,7 @@
 
 <% if (_part === 'brand') { %>
   <a href="/" class="inline-flex items-center gap-2 shrink-0 rounded-lg px-1 py-1 <%= _nav.home.active ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100 hover:text-green-600 dark:hover:text-green-400' %>" <%- _nav.home.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="home">
-    <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="" class="w-7 h-7 rounded" aria-hidden="true">
+    <img src="<%= locals.brand ? brand.navIcon : '/brand/icon-64.png' %>" alt="" class="w-7 h-7 rounded" aria-hidden="true">
     <span class="text-sm font-semibold whitespace-nowrap <%= typeof brandLabelClass !== 'undefined' ? brandLabelClass : '' %>"><%= locals.companyShortName || locals.companyName || 'Home' %></span>
     <span class="sr-only">Home</span>
   </a>

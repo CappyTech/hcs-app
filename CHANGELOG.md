@@ -2,6 +2,32 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.155.0] - 2026-11-26
+
+### Added
+- **Admin → Branding: upload the app icon.** One square image (PNG, JPEG or WebP, up to 2 MB) becomes the icon in the browser tab, the header and footer, an installed app and the offline page. Every upload is re-encoded to a 512×512 PNG and kept in the database (`INTERNAL.appIcon`), so it survives a redeploy. Uploading or removing it is recorded as `app_icon_changed`. With no upload, the app draws a plain mark in the brand colour.
+- **Brand colour** (Configuration → Appearance → `BRAND_COLOUR`): green (the default, unchanged), emerald, teal, cyan, sky, blue, indigo or violet. Tailwind's `green-*` classes now read `--brand-*` CSS variables, and `/brand/palette.css` sets them, so the colour changes without a rebuild. Red, amber and similar aren't offered, because green is also how the app shows "approved" and "done".
+- New settings for values that used to be one company's IDs written into the code:
+  - `PAPERLESS_BANK_CORRESPONDENTS` (Paperless-ngx group): which KashFlow bank account each Paperless bank correspondent is.
+  - `CIS_CHARGE_TYPE_MATERIALS`, `CIS_CHARGE_TYPE_LABOUR` and `CIS_CHARGE_TYPE_DEDUCTION` (KashFlow group): the account's ChargeType IDs for subcontractor purchase lines.
+
+### Changed
+- **The web app manifest and offline page are generated from configuration.** They use the company name, brand colour and icon. `public/manifest/manifest.json` is removed. Icons are served from `/brand/icon-<size>.png` and `/brand/maskable-512.png`, and the service worker cache moves to v4.
+- **No company's IDs or hostnames ship as defaults any more.**
+  - The Paperless bank-correspondent map and the CIS ChargeType IDs come only from the new settings. With none set, bank statements wait for someone to choose the account, and CIS lines are split by nominal code alone.
+  - `HCS_SYNC_BASE_URL` has no default. "Pull from KashFlow" says it isn't configured until it's set.
+  - `HCS_SSO_RETURN_HOSTS` falls back to the host of `HCS_SYNC_BASE_URL`, and to nothing when both are unset.
+  - Both are read on each use, so a saved setting applies without a restart.
+- Help pages no longer say "we" and "us" for the company.
+- The no-company-name test now also covers `app.js`, the offline page and the service worker, and has no exceptions left.
+
+### Upgrade notes
+- Before or straight after deploying, an existing install that relied on the old built-in values must set them under Admin → Configuration:
+  - `HCS_SYNC_BASE_URL` (Sessions & SSO)
+  - `PAPERLESS_BANK_CORRESPONDENTS` (Paperless-ngx)
+  - the three `CIS_CHARGE_TYPE_*` settings (KashFlow)
+
+  Then upload its icon on Admin → Branding.
 ## [6.154.4] - 2026-11-26
 
 ### Fixed

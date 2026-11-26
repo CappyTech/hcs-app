@@ -53,6 +53,8 @@ const EVENT_TYPES = [
   'onedrive_folders_bulk_linked',
   'onedrive_folder_failed',
   'onedrive_connection_tested',
+  // Branding (brandingController)
+  'app_icon_changed',
 ];
 
 const securityEventSchema = new mongoose.Schema(
