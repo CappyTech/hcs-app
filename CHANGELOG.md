@@ -7,6 +7,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Added
 - **Passkeys.** Sign in with your fingerprint, face or device PIN. Account Settings has a new Passkeys card, above the authenticator-app card, where you add, name and remove passkeys. Removing one asks for your password.
   - **Sign in with a passkey** sits at the top of the login page. It needs no username, password or code.
+  - **Passkey autofill.** In browsers that support it (Chrome, Safari, Edge), passkeys saved in the browser or a password manager are listed in the username box's dropdown, like saved passwords. Picking one signs you in. The button stays for browsers without autofill.
   - **A passkey comes before the authenticator code.** Signing in with a password on an account that has a passkey now goes to the two-factor step, which offers "Use your passkey" first, with the authenticator or backup code below it if one is set up. A password alone no longer gets into an account that has a passkey.
   - A passkey counts as two-factor sign-in, because it always asks for the device's own unlock. A role that requires 2FA is satisfied by a passkey or an authenticator app.
   - Passkeys are tied to this app's address (`BASE_URL`, else the address the browser used). Moving the app to a new domain means adding passkeys again.
