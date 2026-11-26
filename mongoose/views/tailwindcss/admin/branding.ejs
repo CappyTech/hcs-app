@@ -1,0 +1,77 @@
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <i class="bi bi-palette-fill text-green-600 dark:text-green-400" aria-hidden="true"></i> Branding
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        The icon people see in the browser tab, the header and footer, on an installed app and on the offline page.
+      </p>
+    </div>
+    <a href="/admin" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Admin</a>
+  </div>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">App icon</h2>
+
+    <div class="flex flex-col sm:flex-row gap-6 items-start">
+      <img src="<%= iconUrl %>" alt="The current app icon" width="96" height="96"
+           class="w-24 h-24 rounded-xl border border-gray-200 dark:border-gray-700 shrink-0">
+
+      <div class="space-y-4 flex-1 min-w-0">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          <% if (hasUpload) { %>
+            This is the icon you uploaded.
+          <% } else { %>
+            No icon has been uploaded, so the app uses this plain mark in the brand colour.
+          <% } %>
+        </p>
+
+        <form method="POST" action="/admin/branding/icon" enctype="multipart/form-data" class="space-y-3">
+          <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+          <div>
+            <label for="icon" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload a new icon</label>
+            <p id="icon-help" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              A square PNG, JPEG or WebP, ideally 512 × 512 pixels, up to 2 MB. Keep the logo away from the edges: phones may crop the corners into a circle.
+            </p>
+            <input type="file" id="icon" name="icon" accept="image/png,image/jpeg,image/webp" required aria-describedby="icon-help"
+                   class="mt-2 block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 dark:file:bg-gray-800 file:px-3 file:py-2 file:text-sm file:font-medium">
+          </div>
+          <button type="submit"
+            class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+            Upload icon
+          </button>
+        </form>
+
+        <% if (hasUpload) { %>
+        <form method="POST" action="/admin/branding/icon/remove">
+          <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+          <button type="submit"
+            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+            Remove the uploaded icon
+          </button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-2">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Elsewhere</h2>
+    <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc pl-5 space-y-1">
+      <li>
+        Brand colour: <strong class="capitalize"><%= colour %></strong>.
+        Change it under <a href="/admin/config/appearance" class="text-green-700 dark:text-green-400 hover:underline">Configuration → Appearance</a>.
+      </li>
+      <li>
+        Company name, address and registration numbers:
+        <a href="/admin/config/organisation" class="text-green-700 dark:text-green-400 hover:underline">Configuration → Organisation</a>.
+      </li>
+      <li>
+        The logo on letters and policies:
+        <a href="/company-docs/letterhead" class="text-green-700 dark:text-green-400 hover:underline">Letterhead</a>.
+      </li>
+    </ul>
+  </div>
+</div>

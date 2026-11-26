@@ -86,6 +86,7 @@ import __fileRoutes from './mongoose/routes/fileRoutes.js';
 import __paperlessTags from './mongoose/config/paperlessTagsConfig.js';
 import { paperlessUiBase as __paperlessUiBase } from './mongoose/services/paperless/documentQueueService.js';
 import __organisation from './services/organisationService.js';
+import __brand from './services/brandService.js';
 import { migrateLegacyKinds as __migrateNotificationKinds } from './mongoose/services/paperless/notificationLogService.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
 import __bankRoutes from './mongoose/routes/bankRoutes.js';
@@ -179,14 +180,12 @@ const main = async () => {
   // the login and setup pages, and the manifest icons are fetched by the browser while
   // the user is logged out (which is exactly when installability is evaluated).
   //
-  // These brand assets are also embedded by sibling subdomains — hcs-sync's
-  // (sync.heroncs.co.uk) layout, footer and web manifest all reference the logo,
-  // favicon and icons here. Helmet's default `Cross-Origin-Resource-Policy:
-  // same-origin` blocks that cross-origin load (ERR_BLOCKED_BY_RESPONSE.NotSameOrigin),
-  // so relax it to `same-site` for this route only: app and sync are both
-  // heroncs.co.uk, so same-site permits the sibling while still refusing any
-  // unrelated origin. Scoped to the branding images; the rest of the app keeps
-  // same-origin.
+  // These images (and /brand/* below) are also embedded by the sibling hcs-sync
+  // dashboard on another subdomain of the same site. Helmet's default
+  // `Cross-Origin-Resource-Policy: same-origin` blocks that cross-origin load
+  // (ERR_BLOCKED_BY_RESPONSE.NotSameOrigin), so relax it to `same-site` for these
+  // routes only: same-site permits the sibling while still refusing any unrelated
+  // origin. The rest of the app keeps same-origin.
   app.use('/resources/images', (_req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
     next();
@@ -204,15 +203,57 @@ const main = async () => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(__dirname, 'public', 'service-worker.js'));
   });
+  // Branding: icon, colours, manifest and offline page come from configuration
+  // (brandService), never from files naming one company. Public and DB-free:
+  // before the database connects, the generated icon is served.
+  const brandCorp = (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    next();
+  };
+  const sendIcon = (size, opts) => async (req, res, next) => {
+    try {
+      const png = await __brand.iconPng(size, opts);
+      res.type('image/png');
+      // Versioned URLs (?v=) change whenever the icon or colour does.
+      res.setHeader('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
+      res.send(png);
+    } catch (err) {
+      next(err);
+    }
+  };
+  app.get('/brand/icon-:size.png', brandCorp, (req, res, next) => {
+    const size = Number.parseInt(req.params.size, 10);
+    if (!__brand.ICON_SIZES.includes(size)) return res.status(404).end();
+    return sendIcon(size)(req, res, next);
+  });
+  app.get('/brand/maskable-512.png', brandCorp, sendIcon(512, { maskable: true }));
+  app.get('/brand/palette.css', brandCorp, (req, res) => {
+    res.type('text/css');
+    res.setHeader('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache');
+    res.send(__brand.paletteCss());
+  });
   app.get('/manifest.json', (req, res) => {
     res.type('application/manifest+json');
-    res.sendFile(path.join(__dirname, 'public', 'manifest', 'manifest.json'));
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(JSON.stringify(__brand.manifest(), null, 2));
   });
   app.get('/offline.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'offline.html'));
+    res.type('html');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(__brand.offlineHtml());
   });
-  app.get('/favicon.ico', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
+  app.get('/favicon.ico', brandCorp, sendIcon(32));
+  // Every view's <head> reads these, including /setup before the database exists.
+  app.use((req, res, next) => {
+    const v = encodeURIComponent(__brand.assetVersion());
+    res.locals.brand = {
+      favicon: `/brand/icon-32.png?v=${v}`,
+      navIcon: `/brand/icon-64.png?v=${v}`,
+      touchIcon: `/brand/icon-180.png?v=${v}`,
+      palette: `/brand/palette.css?v=${encodeURIComponent(__brand.brandColour())}`,
+      themeColour: __brand.themeColour(),
+    };
+    next();
   });
   app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
@@ -486,6 +527,9 @@ const main = async () => {
     } catch (cfgErr) {
       logger.warn('[configValidator] validation error: ' + cfgErr.message);
     }
+
+    // Uploaded app icon (Admin → Branding); the generated mark until then.
+    await __brand.load();
 
     // Load CIS nominal code mappings from the database
     try {

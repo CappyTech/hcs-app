@@ -58,6 +58,14 @@ export default {
         amber: { 600: '#b45309', 700: '#92400e' },
         yellow: { 600: '#a16207', 700: '#854d0e' },
         orange: { 500: '#c2410c', 600: '#c2410c', 700: '#9a3412' },
+        // The company's colour. `green-*` is the app's primary colour everywhere,
+        // so it reads --brand-* variables instead of fixed hex: the defaults in
+        // assets/tailwind.css are Tailwind's green, and /brand/palette.css
+        // (brandService, BRAND_COLOUR) swaps in another palette without a rebuild.
+        green: Object.fromEntries(
+          [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+            .map((s) => [s, `rgb(var(--brand-${s}) / <alpha-value>)`]),
+        ),
         brand: {
           DEFAULT: '#047857',
           light: '#10b981',

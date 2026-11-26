@@ -4,6 +4,7 @@ import authService from '../../services/authService.js';
 import ctrl from '../controllers/adminController.js';
 import userRolesCtrl from '../controllers/userRolesController.js';
 import signInSecurityCtrl from '../controllers/userSignInSecurityController.js';
+import brandingCtrl from '../controllers/brandingController.js';
 
 router.get(
   "/admin/deleted-items",
@@ -64,6 +65,25 @@ router.post(
   "/admin/maintenance",
   authService.ensureRole("admin"),
   ctrl.postMaintenance,
+);
+
+// Branding: the app icon. The colour is a setting on Configuration → Appearance.
+router.get(
+  "/admin/branding",
+  authService.ensureRole("admin"),
+  brandingCtrl.getBranding,
+);
+
+router.post(
+  "/admin/branding/icon",
+  authService.ensureRole("admin"),
+  ...brandingCtrl.postIcon,
+);
+
+router.post(
+  "/admin/branding/icon/remove",
+  authService.ensureRole("admin"),
+  brandingCtrl.postRemoveIcon,
 );
 
 router.post(

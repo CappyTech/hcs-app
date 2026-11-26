@@ -1,4 +1,10 @@
 import { describe, it, beforeEach, afterEach, mock } from 'node:test';
+
+// ChargeType ids are per KashFlow account and come from configuration.
+process.env.CIS_CHARGE_TYPE_MATERIALS = '9001';
+process.env.CIS_CHARGE_TYPE_LABOUR = '9002';
+process.env.CIS_CHARGE_TYPE_DEDUCTION = '9003';
+
 import assert from 'node:assert/strict';
 
 /*
@@ -8,6 +14,7 @@ import assert from 'node:assert/strict';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import purchaseModel from '../mongoose/models/mongoose/REST/purchase.js';
 import {
+
   roundPence,
   lineNet,
   lineProject,
@@ -148,9 +155,9 @@ describe('jobCostService', () => {
     const other = { SupplierCode: 'TIM01' };
 
     it('goes by ChargeType first', () => {
-      assert.equal(lineRole({ ChargeType: 18685896, Description: 'labour' }, sub, subs), 'materials');
-      assert.equal(lineRole({ ChargeType: '18685897', Description: 'materials' }, other, subs), 'labour');
-      assert.equal(lineRole({ ChargeType: 18685964 }, sub, subs), 'cis');
+      assert.equal(lineRole({ ChargeType: 9001, Description: 'labour' }, sub, subs), 'materials');
+      assert.equal(lineRole({ ChargeType: '9002', Description: 'materials' }, other, subs), 'labour');
+      assert.equal(lineRole({ ChargeType: 9003 }, sub, subs), 'cis');
     });
 
     it('then by nominal code', () => {
@@ -323,7 +330,7 @@ describe('jobCostService', () => {
         { Number: 20, IssuedDate: new Date('2026-07-01'), SupplierCode: 'SUB01', ProjectNumber: 41001, LineItems: [
           { Quantity: 1, Rate: 500, Description: 'Labour w/e 4 Jul' },
           { Quantity: 1, Rate: 80, Description: 'Materials' },
-          { Quantity: 1, Rate: -100, ChargeType: 18685964, Description: 'CIS' },
+          { Quantity: 1, Rate: -100, ChargeType: 9003, Description: 'CIS' },
         ] },
       ], { subcontractorCodes: new Set(['SUB01']) });
       assert.deepEqual(out.purchases[0].lines.map((l) => l.role), ['labour', 'materials', 'cis']);

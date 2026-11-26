@@ -283,6 +283,7 @@ describe('checkProjectFinancials', () => {
 
 describe('markProjectComplete', () => {
   let savedSyncApiKey;
+  let savedSyncBaseUrl;
   beforeEach(() => {
     axiosPutCalls  = [];
     axiosGetCalls  = [];
@@ -295,13 +296,18 @@ describe('markProjectComplete', () => {
     stubs.getResult = { Number: 42, Name: 'Test Project', Status: 'Active', CustomerCode: 'CUST01' };
     // hcsSyncService needs the shared key to attempt the re-pull; without it,
     // it short-circuits to the local fallback path.
+    // It also needs to know where hcs-sync is: there is no default host.
     savedSyncApiKey = process.env.HCS_SYNC_API_KEY;
+    savedSyncBaseUrl = process.env.HCS_SYNC_BASE_URL;
     process.env.HCS_SYNC_API_KEY = 'test-sync-api-key';
+    process.env.HCS_SYNC_BASE_URL = 'https://sync.example.test';
   });
 
   const restoreSyncEnv = () => {
     if (savedSyncApiKey === undefined) delete process.env.HCS_SYNC_API_KEY;
     else process.env.HCS_SYNC_API_KEY = savedSyncApiKey;
+    if (savedSyncBaseUrl === undefined) delete process.env.HCS_SYNC_BASE_URL;
+    else process.env.HCS_SYNC_BASE_URL = savedSyncBaseUrl;
   };
 
   it('throws when projectNumber is not provided', async () => {

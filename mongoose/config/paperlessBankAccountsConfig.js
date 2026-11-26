@@ -14,8 +14,8 @@
  *
  * Correspondent names do carry the KashFlow id by convention, and it is
  * tempting to read it from there. But a display name is written by hand and
- * nothing validates it — 'Petty Cash - 5714888' has an extra digit; the real
- * account is 571488. Parsing that would have produced 5714888: a plausible
+ * nothing validates it — a name like 'Petty Cash - 1234567' with an extra digit
+ * (the real account being 123456) would have produced 1234567: a plausible
  * account id that matches nothing, resolving silently to a statement attached
  * to an account that does not exist.
  *
@@ -23,21 +23,16 @@
  * document types and tags by name, which broke three queries when the types
  * were renamed.
  *
- * Correspondent ids come from Paperless and are stable across renames. The map
- * can be overridden wholesale with PAPERLESS_BANK_CORRESPONDENTS, a
- * comma-separated list of `<correspondentId>:<kashflowAccountId>` pairs, so a
- * new account does not require a deploy.
+ * Correspondent ids come from Paperless and are stable across renames. The
+ * map is PAPERLESS_BANK_CORRESPONDENTS (Admin → Configuration → Paperless-ngx),
+ * a comma-separated list of `<correspondentId>:<kashflowAccountId>` pairs,
+ * read on every call so a new account needs no deploy. Unset, there is no map:
+ * the ids belong to one company's Paperless and KashFlow, so none ship here.
  */
 
-/** Paperless correspondent id -> KashFlow bankAccount.Id */
-const DEFAULT_CORRESPONDENT_TO_ACCOUNT = {
-  65: 611594, // main business current account
-  66: 680198, // Credit Card 3998/2060/5865/5760
-  67: 938298, // Business Credit Card 2829/5766/7859
-  68: 571488, // Petty Cash
-};
+import configService from '../../services/configService.js';
 
-function parseOverride(raw) {
+export function parseOverride(raw) {
   const out = {};
   for (const pair of String(raw || '').split(',')) {
     const [left, right] = pair.split(':').map(s => s?.trim());
@@ -50,10 +45,10 @@ function parseOverride(raw) {
   return out;
 }
 
-export const CORRESPONDENT_TO_ACCOUNT = (() => {
-  const override = parseOverride(process.env.PAPERLESS_BANK_CORRESPONDENTS);
-  return Object.keys(override).length ? override : DEFAULT_CORRESPONDENT_TO_ACCOUNT;
-})();
+/** Paperless correspondent id -> KashFlow bankAccount.Id, from configuration. */
+export function correspondentToAccount() {
+  return parseOverride(configService.get('PAPERLESS_BANK_CORRESPONDENTS', ''));
+}
 
 /** Name of the custom field carrying the account id, matched loosely. */
 export const ACCOUNT_ID_FIELD_NAMES = ['bank account id', 'bank_account_id', 'bankaccountid'];
@@ -73,18 +68,19 @@ export function resolveAccountId(doc) {
 
   for (const field of doc?.customFields || []) {
     if (!wanted.includes(normalise(field?.fieldName))) continue;
-    // The field is 'float' in Paperless, so the value may arrive as 611594.0
+    // The field is 'float' in Paperless, so the value may arrive as 123456.0
     // or as a string; both must land on the integer id.
     const n = Number.parseInt(String(field?.value ?? '').trim(), 10);
     if (Number.isFinite(n) && n > 0) return { accountId: n, source: 'custom-field' };
   }
 
   const correspondentId = doc?.correspondent?.id;
-  if (correspondentId != null && CORRESPONDENT_TO_ACCOUNT[correspondentId] != null) {
-    return { accountId: CORRESPONDENT_TO_ACCOUNT[correspondentId], source: 'correspondent' };
+  const map = correspondentToAccount();
+  if (correspondentId != null && map[correspondentId] != null) {
+    return { accountId: map[correspondentId], source: 'correspondent' };
   }
 
   return { accountId: null, source: null };
 }
 
-export default { CORRESPONDENT_TO_ACCOUNT, ACCOUNT_ID_FIELD_NAMES, resolveAccountId };
+export default { correspondentToAccount, parseOverride, ACCOUNT_ID_FIELD_NAMES, resolveAccountId };

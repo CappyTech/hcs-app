@@ -86,9 +86,13 @@ describe('organisationService', () => {
       }
     };
     roots.forEach(walk);
-    // Known, deliberate exceptions: security allowlists and SSO defaults that
-    // deployment configuration overrides (HCS_SSO_RETURN_HOSTS, HCS_SYNC_BASE_URL).
-    const allowed = new Set(['services/securityService.js', 'mongoose/controllers/ssoController.js', 'mongoose/services/hcsSyncService.js']);
-    assert.deepEqual(offending.filter((p) => !allowed.has(p)), []);
+    // The shipped PWA files and the entry point too (the manifest and offline
+    // page are rendered from configuration now).
+    for (const f of ['app.js', 'public/offline.html', 'public/service-worker.js']) {
+      const src = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/<!--[\s\S]*?-->/g, '');
+      if (/\bHeron\b|heroncs\.co\.uk|HeronCS|HCS-Logo/.test(src)) offending.push(f);
+    }
+    // No exceptions: the hcs-sync URL and return hosts have no default either.
+    assert.deepEqual(offending, []);
   });
 });

@@ -16,7 +16,7 @@ function getSafeNext(raw) {
   if (v.startsWith("//")) return null;
   if (v.includes("\\")) return null;
   // Check only the path portion (before ?) for :// so that query params
-  // like ?return_to=https://sync.heroncs.co.uk are not rejected.
+  // like ?return_to=https://sync.example.com are not rejected.
   const pathPart = v.split("?")[0];
   if (pathPart.includes("://")) return null;
   return v;
