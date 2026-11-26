@@ -2,6 +2,10 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.154.3] - 2026-11-26
+
+### Fixed
+- **The document reader now finds line items under an amount column headed "Value ex VAT".** It only knew the plain names ("Value", "Net", "Amount"), so a heading with "ex VAT" on the end had no amount column. The whole table was then skipped, and the entry screen offered no lines to fill. "ex VAT", "exc VAT", "excl. VAT" and "excluding VAT" now mean net, the same as the plain name. "inc VAT" / "incl. VAT" on an amount heading mean the line's gross.
 ## [6.154.2] - 2026-11-26
 
 ### Fixed
