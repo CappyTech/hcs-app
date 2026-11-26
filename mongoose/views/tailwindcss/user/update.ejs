@@ -54,6 +54,72 @@
 </div>
 <% } %>
 
+<% if (typeof signInSecurity !== 'undefined' && signInSecurity && formData && formData.uuid) { %>
+<%# Admin only: clear a person's authenticator app and/or passkeys when they've lost the device (userSignInSecurityController). %>
+<% const _sec = signInSecurity; const _none = !_sec.totpEnabled && !_sec.passkeys.length; %>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-6" id="sign-in-security">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-amber-500 to-orange-400"></div>
+    <div class="p-6 sm:p-8">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Two-factor sign-in</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        For someone who has lost their phone or security key and can't get past the two-factor step.
+        Clearing leaves their password as it is. If a role they hold requires two-factor, they'll be asked to set it up again when they next sign in.
+      </p>
+
+      <% if (_none) { %>
+        <p class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">No passkeys or authenticator app are set up. They sign in with their password only.</p>
+      <% } else { %>
+      <form method="POST" action="/admin/users/<%= encodeURIComponent(formData.uuid) %>/clear-2fa" class="space-y-3">
+        <%- include('../partials/csrfHidden') %>
+        <label class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 <%= _sec.passkeys.length ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : 'opacity-60 cursor-not-allowed' %>">
+          <input type="checkbox" name="passkeys" value="on" <%= _sec.passkeys.length ? '' : 'disabled' %>
+            class="mt-1 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500">
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Passkeys <span class="font-normal text-gray-500 dark:text-gray-400">(<%= _sec.passkeys.length %>)</span>
+            </span>
+            <% if (_sec.passkeys.length) { %>
+              <% _sec.passkeys.forEach(p => { %>
+                <span class="block text-sm text-gray-500 dark:text-gray-400">
+                  <i class="bi bi-fingerprint" aria-hidden="true"></i> <%= p.name %>
+                  · last used <%= p.lastUsedAt ? slimDateTime(p.lastUsedAt, ['includeTime']) : 'never' %>
+                </span>
+              <% }) %>
+            <% } else { %>
+              <span class="block text-sm text-gray-500 dark:text-gray-400">None set up.</span>
+            <% } %>
+          </span>
+        </label>
+        <label class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 <%= _sec.totpEnabled ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : 'opacity-60 cursor-not-allowed' %>">
+          <input type="checkbox" name="totp" value="on" <%= _sec.totpEnabled ? '' : 'disabled' %>
+            class="mt-1 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500">
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Authenticator app and backup codes</span>
+            <span class="block text-sm text-gray-500 dark:text-gray-400">
+              <%= _sec.totpEnabled ? `Set up · ${_sec.backupCodesLeft} backup code${_sec.backupCodesLeft === 1 ? '' : 's'} left` : 'Not set up.' %>
+            </span>
+          </span>
+        </label>
+        <div class="pt-2 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Your password, to confirm
+            <input type="password" name="confirmPassword" required autocomplete="current-password"
+              class="mt-1 w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500">
+          </label>
+          <button type="submit"
+            class="inline-flex items-center justify-center gap-1.5 text-sm bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg shadow-sm font-medium transition"
+            data-confirm="Clear the ticked two-factor sign-in for <%= formData.username || 'this person' %>? They'll be able to sign in with their password alone until they set it up again.">
+            <i class="bi bi-shield-x" aria-hidden="true"></i> Clear selected
+          </button>
+        </div>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <% if (typeof roleDetails !== 'undefined' && typeof allRoles !== 'undefined') { %>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">

@@ -542,7 +542,7 @@ export default {
       }
     },
     updateView: path.join('tailwindcss', 'user', 'update'),
-    updateLocals: async (item) => {
+    updateLocals: async (item, req) => {
       const allRoles = ['none', 'employee', 'subcontractor', 'client', 'accountant', 'hmrc', 'admin'];
 
       // Build a summary of what each role grants for the permissions preview
@@ -585,7 +585,17 @@ export default {
       const valuesFlagRoles = Object.values(accessGroups.jobRoles)
         .filter((d) => d.values === 'flag').map((d) => d.label);
 
-      return { roleDetails, allRoles, jobRoleOptions, canSeeValues, valuesFlagRoles };
+      // Sign-in security card (admins only): which second factors are set up,
+      // so they can be cleared (userSignInSecurityController). No secrets.
+      const signInSecurity = req?.session?.user?.role === 'admin' ? {
+        totpEnabled: !!item?.totpEnabled,
+        backupCodesLeft: Array.isArray(item?.totpBackupCodes) ? item.totpBackupCodes.length : 0,
+        passkeys: (Array.isArray(item?.passkeys) ? item.passkeys : []).map((p) => ({
+          name: p.name || 'Passkey', createdAt: p.createdAt || null, lastUsedAt: p.lastUsedAt || null,
+        })),
+      } : null;
+
+      return { roleDetails, allRoles, jobRoleOptions, canSeeValues, valuesFlagRoles, signInSecurity };
     },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item, req) => {
