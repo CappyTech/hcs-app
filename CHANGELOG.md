@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.154.2] - 2026-11-26
+
+### Fixed
+- **The KashFlow send result page now links back properly.** It had one "Back to document" link and a "Back to draft" button, even after a successful send. It now has the same link row as the draft screen: back to Ready for KashFlow, Queues, All documents and the document's details. After a successful send its buttons are "View document" and "Next to send". "Back to draft" now only shows when the send failed. The "Open in KashFlow" link now opens with `rel="noopener noreferrer"`.
+- **Opening `/paperless/ocr/:id/send` directly no longer gives a 404.** The result page shows at the send form's POST address, so a refresh, bookmark or shared link asked for it as a GET, and there was no GET route. It now redirects to the document's details.
+
 ## [6.154.1] - 2026-11-26
 
 ### Security
