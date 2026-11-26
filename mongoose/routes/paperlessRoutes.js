@@ -87,6 +87,9 @@ router.get("/paperless/ocr/:paperlessId/draft", ...docs("manage"), ctrl.getPurch
 router.get("/paperless/ocr/:paperlessId/match", ...docs("approve"), ctrl.getMatchPurchase);
 router.post("/paperless/ocr/:paperlessId/match", ...docs("approve"), ctrl.postMatchPurchase);
 router.post("/paperless/ocr/:paperlessId/send", ...docs("manage"), ctrl.sendDraftToKashflow);
+// The send result renders at the POST URL, so a refresh, bookmark or shared
+// link lands here as a GET: send it to the document rather than a 404.
+router.get("/paperless/ocr/:paperlessId/send", ...docs("view"), (req, res) => res.redirect(`/paperless/ocr/${encodeURIComponent(req.params.paperlessId)}`));
 router.post("/paperless/ocr/:paperlessId/draft/extra-lines", ...docs("manage"), ctrl.saveDraftExtraLines);
 router.post("/paperless/ocr/:paperlessId/ingest", ...docs("manage"), ctrl.reIngestOne);
 router.post("/paperless/ocr/:paperlessId/sync-fields", ...docs("manage"), ctrl.syncPaperlessFields);

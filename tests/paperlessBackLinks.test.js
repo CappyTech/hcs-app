@@ -21,12 +21,36 @@ describe('Documents pages: back links', () => {
       'shadowReport.ejs': /href="\/paperless\/queues"[^>]*>← Queues/,
       'supplierReading.ejs': /href="\/paperless\/reading"[^>]*>← Reading accuracy/,
       'match.ejs': /href="\/paperless\/ocr\/<%= doc\.paperlessId %>"[^>]*>← Back to document/,
-      'sendResult.ejs': /href="\/paperless\/ocr\/<%= paperlessId %>"[^>]*>← Back to document/,
+      'sendResult.ejs': /href="\/paperless\/queues\/ready"[^>]*>← Ready for KashFlow/,
       'draft.ejs': /href="\/paperless\/queues<%= _queueBack \? `\/\$\{_queueBack\.key\}` : '' %>"[^>]*>← <%= _queueBack \? _queueBack\.label : 'Queues' %>/,
       'read.ejs': /← All documents/,
       'entry.ejs': /← <%= QUEUE_LABELS\[queueBack\] \|\| 'Queues' %>/,
     };
     for (const [f, re] of Object.entries(expected)) assert.match(read(V + f), re, f);
+  });
+
+  describe('send result page', () => {
+    const render = (ok) => ejs.render(read(V + 'sendResult.ejs'), {
+      title: 'KashFlow Send Result', paperlessId: 1005, payload: null, draft: null,
+      result: { ok, response: ok ? { Number: 7 } : null },
+    });
+
+    it('links to the queues, all documents and the document either way', () => {
+      for (const ok of [true, false]) {
+        const html = render(ok);
+        for (const href of ['/paperless/queues', '/paperless/ocr', '/paperless/ocr/1005']) assert.ok(html.includes(`href="${href}"`), `${ok} ${href}`);
+      }
+    });
+
+    it('offers the draft only when the send failed', () => {
+      assert.ok(!render(true).includes('/paperless/ocr/1005/draft'));
+      assert.match(render(true), />Next to send</);
+      assert.match(render(false), /href="\/paperless\/ocr\/1005\/draft"[^>]*>Back to draft/);
+    });
+
+    it('a GET of the send URL (refresh, bookmark) redirects to the document', () => {
+      assert.match(read('mongoose/routes/paperlessRoutes.js'), /router\.get\("\/paperless\/ocr\/:paperlessId\/send", \.\.\.docs\("view"\), \(req, res\) => res\.redirect\(`\/paperless\/ocr\/\$\{encodeURIComponent\(req\.params\.paperlessId\)\}`\)\);/);
+    });
   });
 
   it("the entry screen's supplier links say which document they came from", () => {
