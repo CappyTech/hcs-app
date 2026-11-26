@@ -211,6 +211,17 @@ export function findDayLines(rows) {
 // "Sub Total" (Screwfix's is gross) and "Gross"
 const amountRank = (c) => (c.type === 'gross' ? 4 : /\bnet\b|goods/i.test(c.str) ? 0 : /amount|value|charge|line\s*total/i.test(c.str) ? 1 : /total/i.test(c.str) ? 2 : 3);
 
+const SECTION_TITLE = /^\s*(vat|tax)\s*(analysis|summary|breakdown)\b|^\s*order\s*summary\b/i;
+
+/** A row that can't be part of the lines table above it. */
+function endsTable(row) {
+  if (row.items.some((it) => SECTION_TITLE.test(it.str))) return true;
+  const ph = phrases(row);
+  if (ph.some((p) => parseNumber(p.str) != null || parseMoney(p.str) != null)) return false;
+  const types = ph.map((p) => columnType(p.str)).filter(Boolean);
+  return types.length >= 3 && types.some((t) => t === 'net' || t === 'gross');
+}
+
 function readTable(rows, start, head) {
   const { cols } = head;
   const amountCol = cols.filter((c) => c.type === 'net' || c.type === 'gross').sort((a, b) => amountRank(a) - amountRank(b))[0];
@@ -225,6 +236,10 @@ function readTable(rows, start, head) {
     // The reverse charge note under the lines ("Reverse VAT - 20%", then
     // "Customer to account to HMRC…") isn't more of the last line's description
     if (/^\s*reverse\s*(vat|charge)\b/i.test(row.items[0].str)) break;
+    // A box beside or below the lines that isn't more of them: a "VAT Analysis"
+    // title anywhere on the row (Toolstation sets it beside "Company
+    // Information"), or another table's heading ("Band Rate Net VAT Total")
+    if (endsTable(row)) break;
     lastY = row.y;
     const cells = {};
     const text = [];

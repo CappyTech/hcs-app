@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.152.1] - 2026-11-26
+
+### Fixed
+- **Toolstation receipts found 5 lines instead of 3, so the line prices stayed VAT-inclusive.** The "Company Information" and "VAT Analysis" boxes sit a couple of rows under the lines. The reader read on into them, so the last line's description picked up the box titles and the VAT analysis rows became two extra lines. Those extra lines meant the lines no longer added up to goods + VAT, which is how the reader spots VAT-inclusive totals, so the prices weren't made net. The entry screen then warned "Lines add up to … which is goods + VAT". Now the lines table ends at a "VAT Analysis" (or "VAT Summary", "Order Summary") title anywhere on the row, or at a row that is another table's headings ("Band Rate Net VAT Total"). The three lines add up to goods + VAT again and are filled in net.
+  - `READER_VERSION` 13, so stored readings are read again. Entries already saved keep their lines. Use "Replace with the 3 lines on the document" to swap them for the net ones.
+
 ## [6.152.0] - 2026-11-25
 
 ### Added

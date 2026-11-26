@@ -203,6 +203,38 @@ describe('line items', () => {
     assert.equal(Math.round(net.reduce((s, l) => s + l.total, 0) * 100) / 100, 14.98);
   });
 
+  it('the VAT Analysis box beside and below the lines is not more lines (Toolstation)', () => {
+    const lines = findLines(page([
+      ['Code', 5, 692, 20, 8], ['Items', 39, 692, 22, 8], ['Qty', 364, 692, 14, 8], ['Price', 386, 692, 21, 8], ['Totals', 418, 692, 24, 8], ['VAT Band', 457, 692, 40, 8],
+      ['ORDER123', 5, 675, 50, 8],
+      ['11111', 5, 659, 20, 8], ['Plastic tub', 39, 659, 50, 8], ['1', 369, 659, 4, 8], ['7.48', 388, 659, 16, 8], ['7.48', 422, 659, 16, 8], ['5', 476, 659, 4, 8],
+      ['22222', 5, 646, 20, 8], ['Cutting disc', 39, 646, 60, 8], ['2', 369, 646, 4, 8], ['5.25', 388, 646, 16, 8], ['10.50', 420, 646, 20, 8], ['5', 476, 646, 4, 8],
+      ['00006', 5, 634, 20, 8], ['Collection', 39, 634, 50, 8], ['1', 369, 634, 4, 8], ['0.00', 388, 634, 16, 8], ['0.00', 422, 634, 16, 8], ['5', 476, 634, 4, 8],
+      // Boxes two rows down: the supplier's details beside the VAT analysis
+      ['Company Information', 5, 604, 95, 9], ['VAT Analysis', 303, 604, 59, 9],
+      ['Supplier Ltd', 5, 582, 60, 8],
+      ['Band', 312, 578, 21, 8], ['Rate', 349, 578, 18, 8], ['Net', 391, 578, 12, 8], ['VAT', 432, 578, 18, 8], ['Total', 474, 578, 23, 8],
+      ['www.example.com', 5, 570, 84, 8],
+      ['5', 320, 562, 5, 8], ['20%', 349, 562, 17, 8], ['£14.98', 385, 562, 26, 8], ['£3.00', 430, 562, 22, 8], ['£17.98', 470, 562, 26, 8],
+      ['£14.98', 385, 546, 26, 8], ['£3.00', 430, 546, 22, 8], ['£17.98', 470, 546, 26, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.description, l.total]), [['Plastic tub', 7.48], ['Cutting disc', 10.5], ['Collection', 0]]);
+    // So they add up to goods + VAT, and become net
+    const net = netOfVat(fillMissingRates(lines, '14.98', '3.00'), '14.98', '3.00');
+    assert.ok(net.every((l) => l.vatInclusive));
+  });
+
+  it('a row of another table’s headings ends the lines', () => {
+    const head = [['Description', 39, 692, 50, 8], ['Qty', 364, 692, 14, 8], ['Price', 386, 692, 21, 8], ['Amount', 418, 692, 30, 8]];
+    const lines = findLines(page([
+      ...head,
+      ['Labour', 39, 680, 30, 8], ['1', 369, 680, 4, 8], ['100.00', 386, 680, 26, 8], ['100.00', 420, 680, 26, 8],
+      ['Rate', 349, 668, 18, 8], ['Net', 391, 668, 12, 8], ['VAT', 432, 668, 18, 8],
+      ['20%', 349, 656, 17, 8], ['100.00', 386, 656, 26, 8], ['20.00', 422, 656, 22, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => l.description), ['Labour']);
+  });
+
   it('leaves net lines alone, and lines that add up to neither goods nor goods + VAT', () => {
     const lines = [{ quantity: 1, price: 10, total: 10, vatRate: 20 }, { quantity: 1, price: 5, total: 5, vatRate: 20 }];
     assert.equal(netOfVat(lines, 15, 3), lines);
