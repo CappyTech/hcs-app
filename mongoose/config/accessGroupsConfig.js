@@ -160,6 +160,7 @@ export const groups = {
     routes: {
       view: [
         '/payroll/dashboard', '/payroll/runs', '/payroll/submissions', '/overview/payroll',
+        '/payroll/staffology', '/payroll/staffology/employees',
         '/overview/payrollRun', '/overview/payrollSubmission', '/weekly-flow', '/weekly-sheet', '/overview/weekly',
       ],
     },

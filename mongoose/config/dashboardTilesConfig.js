@@ -250,6 +250,13 @@ export default {
         department: ['payroll', 'finance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    StaffologyPayroll: {
+        title: 'Staffology pay',
+        description: 'Each Staffology pay run next to approved attendance, with anything that does not match.',
+        link: '/payroll/staffology',
+        department: ['payroll', 'finance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     ExternalPayroll: {
         title: 'KashFlow Payroll',
         description: 'Access the external payroll management system.',

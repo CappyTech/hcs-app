@@ -21,7 +21,7 @@ const __dirname = _esmDirname(__filename);
 export const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session,workbookImport,inAppNotification,appIcon')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
-const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {}, WEB: {} };
+const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {}, WEB: {}, STAFFOLOGY: {} };
 let isConnected = false;
 let sshServer = null;
 
@@ -100,7 +100,7 @@ async function createNamespace(ns, connection) {
 
 mdb.connect = async () => {
   try {
-    if (isConnected && mdb.REST.connection && mdb.INTERNAL.connection && mdb.PAPERLESS.connection && mdb.WEB.connection) {
+    if (isConnected && mdb.REST.connection && mdb.INTERNAL.connection && mdb.PAPERLESS.connection && mdb.WEB.connection && mdb.STAFFOLOGY.connection) {
       return mdb;
     }
     let localPort = null;
@@ -160,8 +160,11 @@ mdb.connect = async () => {
     // Website content authored in /website and pulled by hcs-web. Its own
     // namespace so the public site's copy is never mixed into the business data.
     const webDb = configService.get('MONGO_DBNAME_WEB', 'hcs-webdb');
+    // Payroll data from Staffology, written by hcs-sync into its own database
+    // so it never mixes with the accounting mirror. Read-only here.
+    const staffologyDb = configService.get('MONGO_DBNAME_STAFFOLOGY', 'staffology');
 
-    let restUri, internalUri, paperlessUri, webUri;
+    let restUri, internalUri, paperlessUri, webUri, staffologyUri;
 
     if (isTunnelEnabled) {
       const mongoUser = encodeURIComponent(configService.get('MONGO_USER', ''));
@@ -170,6 +173,7 @@ mdb.connect = async () => {
       internalUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
       paperlessUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
       webUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${webDb}?authSource=admin`;
+      staffologyUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${staffologyDb}?authSource=admin`;
       if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connected to MongoDB via SSH tunnel');
     } else {
       // Prefer explicit MONGO_URI; otherwise build from parts
@@ -179,6 +183,7 @@ mdb.connect = async () => {
       internalUri = getUriWithDb(baseUri, internalDb);
       paperlessUri = getUriWithDb(baseUri, paperlessDb);
       webUri = getUriWithDb(baseUri, webDb);
+      staffologyUri = getUriWithDb(baseUri, staffologyDb);
       if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connecting to MongoDB via ' + (rawUri ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
     }
 
@@ -186,12 +191,14 @@ mdb.connect = async () => {
     const internalConn = mongoose.createConnection(internalUri);
     const paperlessConn = mongoose.createConnection(paperlessUri);
     const webConn = mongoose.createConnection(webUri);
+    const staffologyConn = mongoose.createConnection(staffologyUri);
 
     await Promise.all([
       new Promise((res, rej) => { restConn.once('open', res); restConn.on('error', rej); }),
       new Promise((res, rej) => { internalConn.once('open', res); internalConn.on('error', rej); }),
       new Promise((res, rej) => { paperlessConn.once('open', res); paperlessConn.on('error', rej); }),
-      new Promise((res, rej) => { webConn.once('open', res); webConn.on('error', rej); })
+      new Promise((res, rej) => { webConn.once('open', res); webConn.on('error', rej); }),
+      new Promise((res, rej) => { staffologyConn.once('open', res); staffologyConn.on('error', rej); })
     ]);
 
     if (process.env.DEBUG) {
@@ -199,6 +206,7 @@ mdb.connect = async () => {
       logger.info('[mongooseDatabaseService] INTERNAL connection open');
       logger.info('[mongooseDatabaseService] PAPERLESS connection open');
       logger.info('[mongooseDatabaseService] WEB connection open');
+      logger.info('[mongooseDatabaseService] STAFFOLOGY connection open');
     }
 
     // Load models into each namespace
@@ -206,6 +214,7 @@ mdb.connect = async () => {
     await createNamespace('INTERNAL', internalConn);
     await createNamespace('PAPERLESS', paperlessConn);
     await createNamespace('WEB', webConn);
+    await createNamespace('STAFFOLOGY', staffologyConn);
 
     isConnected = true;
     return mdb;
@@ -222,6 +231,7 @@ const cleanup = async () => {
     try { await mdb.INTERNAL?.connection?.close(); } catch {}
     try { await mdb.PAPERLESS?.connection?.close(); } catch {}
     try { await mdb.WEB?.connection?.close(); } catch {}
+    try { await mdb.STAFFOLOGY?.connection?.close(); } catch {}
 
     if (sshServer && sshServer.close) {
       sshServer.close();

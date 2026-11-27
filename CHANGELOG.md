@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.157.0] - 2026-11-27
+
+### Added
+- **Staffology pay vs attendance** (`/payroll/staffology`). Payroll is run in Staffology; hcs-sync now copies its employees and pay runs into their own `staffology` database, and this page lines each pay entry up against the approved attendance for the same dates. Each person shows paid gross, tax, NI, net and total cost next to approved days and hours and the expected gross. A row is flagged when:
+  - they were paid with no approved attendance
+  - they have approved attendance but no pay
+  - paid gross differs from expected by more than £1
+  - days in the period are still waiting for approval
+  - attendance changed after the pay run closed
+  - the Staffology employee isn't linked to an hcs-app employee
+- **Staffology employees** (`/payroll/staffology/employees`): each Staffology employee and the hcs-app employee it matches. Matching is by payroll code against the employee's Payroll ID; no NI numbers are used. Admins can link an unmatched person to a name-matched employee, which sets that Payroll ID. Refused when the code is already on someone else.
+- Recent Staffology pay on the employee's Payroll settings page, and links from the Payroll overview and a dashboard tile.
+- New `STAFFOLOGY` database namespace, `MONGO_DBNAME_STAFFOLOGY` (default `staffology`), also on the setup page. Read-only here; it must match hcs-sync's `STAFFOLOGY_DB_NAME`, and the Mongo user needs read on it.
+
 ## [6.156.0] - 2026-11-27
 
 ### Added

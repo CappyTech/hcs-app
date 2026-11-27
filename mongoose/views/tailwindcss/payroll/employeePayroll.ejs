@@ -166,4 +166,44 @@
 
     </div>
   </div>
+
+  <!-- Recent pay from Staffology (synced by hcs-sync; matched on Payroll ID) -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Recent pay from Staffology</h2>
+      <a href="/payroll/staffology" class="inline-block py-1 -my-1 text-sm text-green-700 dark:text-green-400 hover:underline">Pay vs attendance</a>
+    </div>
+    <% if (!employee.payroll?.payrollId) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Set a Payroll ID above that matches this person's Staffology payroll code to see their pay here.</p>
+    <% } else if (!recentPay.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">No Staffology pay entries for payroll code <span class="font-mono"><%= employee.payroll.payrollId %></span> yet.</p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead>
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Paid on</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Period</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tax</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Employee NI</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Net</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% recentPay.forEach((e) => { const t = e.Totals || {}; %>
+              <tr>
+                <td class="px-3 py-2 text-gray-900 dark:text-white"><%= e.PaymentDate ? new Date(e.PaymentDate).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }) : '—' %></td>
+                <td class="px-3 py-2 text-gray-700 dark:text-gray-300"><%= e.PayPeriod %> <%= e.Period %></td>
+                <td class="px-3 py-2 text-right tabular-nums">£<%= fmt(t.Gross) %></td>
+                <td class="px-3 py-2 text-right tabular-nums">£<%= fmt(t.Tax) %></td>
+                <td class="px-3 py-2 text-right tabular-nums">£<%= fmt(t.EmployeeNi) %></td>
+                <td class="px-3 py-2 text-right tabular-nums">£<%= fmt(t.NetPay) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
 </div>

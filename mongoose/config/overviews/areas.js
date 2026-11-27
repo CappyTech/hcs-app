@@ -88,6 +88,11 @@ export default [
     icon: 'bi-cash-coin',
     description: 'Pay runs, year-to-date totals and HMRC submissions.',
     children: ['payrollRun', 'payrollSubmission'],
+    // Shown only to those who can open the route (rolePermissionsConfig)
+    actions: [
+      { label: 'Staffology pay vs attendance', href: '/payroll/staffology', route: '/payroll/staffology', icon: 'bi-clipboard-check' },
+      { label: 'Staffology employees', href: '/payroll/staffology/employees', route: '/payroll/staffology/employees', icon: 'bi-people' },
+    ],
   },
   {
     id: 'documents', group: 'work', path: '/overview/documents', bespoke: true,

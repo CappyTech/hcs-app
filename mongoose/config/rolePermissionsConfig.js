@@ -319,6 +319,8 @@ const routeAccess = {
   // Mirror the guards in payrollRoutes.js so the overviews can tell who may see runs and submissions
   '/payroll/runs':        ['admin', 'accountant'],
   '/payroll/submissions': ['admin', 'accountant'],
+  '/payroll/staffology':  ['admin', 'accountant'],
+  '/payroll/staffology/employees': ['admin', 'accountant'],
   // Legacy dashboard URLs that now redirect (kashflow → finance,
   // paperless dashboard → documents; /paperless/* OCR routes listed below)
   '/kashflow':            ['admin', 'accountant'],

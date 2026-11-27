@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/payrollController.js';
+import provider from '../controllers/payrollProviderController.js';
 
 // Permission groups (accessGroupsConfig), Payroll:
 //   view    — dashboard, runs, submissions log, FPS/EPS/pension downloads
@@ -122,6 +123,24 @@ router.get('/settings/payroll/tax-rates/:year',
 router.post('/settings/payroll/tax-rates/:year',
   authService.ensureRole('admin'),
   ctrl.saveEditTaxRate
+);
+
+// ── Staffology (external payroll) ─────────────────────────────────────────────
+// Payroll is run in Staffology; hcs-sync copies its employees and pay runs into
+// the STAFFOLOGY database. These pages compare that pay with approved
+// attendance. Same access as the dashboard; linking changes an employee's
+// payroll ID, so it is admin only.
+router.get('/payroll/staffology',
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
+  provider.renderComparison
+);
+router.get('/payroll/staffology/employees',
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
+  provider.renderEmployees
+);
+router.post('/payroll/staffology/employees/:uuid/link',
+  authService.ensureRole('admin'),
+  provider.linkEmployee
 );
 
 // ── Employee payroll settings ─────────────────────────────────────────────────
