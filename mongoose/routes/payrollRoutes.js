@@ -155,6 +155,11 @@ router.post('/payroll/staffology/employees/:uuid/link',
   authService.ensureRole('admin'),
   provider.linkEmployee
 );
+// Pick-list form: the employee comes from the form (employeeUuid).
+router.post('/payroll/staffology/employees/link',
+  authService.ensureRole('admin'),
+  provider.linkEmployee
+);
 
 // ── Employee payroll settings ─────────────────────────────────────────────────
 router.get('/payroll/employee/:uuid',
