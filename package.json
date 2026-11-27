@@ -1,6 +1,6 @@
 {
   "name": "hcs-app",
-  "version": "6.156.0",
+  "version": "6.157.0",
   "requiredSchemasVersion": "3.0.0",
   "type": "module",
   "description": "Business platform for a construction company, deployed once per company: CIS compliance, HR, attendance, fleet, holidays, document management and finance dashboards. (Payroll and direct HMRC integration are in development, not production-ready.)",

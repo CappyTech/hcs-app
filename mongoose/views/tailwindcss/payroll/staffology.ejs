@@ -1,0 +1,136 @@
+<%
+  const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const flagPill = {
+    'unmatched': 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
+    'paid-no-attendance': 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+    'attendance-not-paid': 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+    'gross-differs': 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    'unapproved-days': 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    'changed-after-close': 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700',
+  };
+  const periodLabel = (p) => `${taxYearLabel(p.TaxYear)} · ${p.PayPeriod} ${p.Period}${p.Ordinal > 1 ? ` (run ${p.Ordinal})` : ''} · ${fmtDate(p.StartDate)} to ${fmtDate(p.EndDate)}`;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <a href="/payroll/dashboard" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Payroll</a>
+      <span class="text-gray-400">/</span>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Staffology pay vs attendance</h1>
+    </div>
+    <a href="/payroll/staffology/employees"
+      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+      <i class="bi bi-people"></i> Staffology employees
+    </a>
+  </div>
+
+  <p class="text-sm text-gray-700 dark:text-gray-300">
+    Payroll is run in Staffology. hcs-sync copies each pay run here, and every person's pay is compared with their
+    <strong>approved</strong> attendance for the same dates. Expected gross is approved hours × hourly rate, or the day rate where one is set.
+  </p>
+
+  <% if (!periods.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No Staffology data yet — set STAFFOLOGY_API_KEY on hcs-sync.
+    </div>
+  <% } else { %>
+
+    <form method="GET" action="/payroll/staffology" class="flex gap-2 flex-wrap items-center">
+      <label for="f-period" class="text-sm font-medium text-gray-500 dark:text-gray-400">Pay period</label>
+      <select id="f-period" name="period"
+        class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+        <% periods.forEach((p) => { %>
+          <option value="<%= periodKey(p) %>" <%= periodKey(p) === periodKey(selected) ? 'selected' : '' %>><%= periodLabel(p) %></option>
+        <% }) %>
+      </select>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Show</button>
+    </form>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Paid on</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= fmtDate(selected.PaymentDate) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">People</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= comparison.rows.length %></p>
+      </div>
+      <div class="<%= comparison.flagged ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20' : 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' %> border rounded-xl shadow-sm p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Need a look</p>
+        <p class="text-lg font-semibold <%= comparison.flagged ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400' %>"><%= comparison.flagged %></p>
+      </div>
+    </div>
+
+    <% if (!comparison.rows.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        No pay entries for this period.
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %> text-left">Person</th>
+              <th class="<%= th %> text-right">Paid gross</th>
+              <th class="<%= th %> text-right">Tax</th>
+              <th class="<%= th %> text-right">NI (ee / er)</th>
+              <th class="<%= th %> text-right">Net</th>
+              <th class="<%= th %> text-right">Total cost</th>
+              <th class="<%= th %> text-right">Approved</th>
+              <th class="<%= th %> text-right">Expected gross</th>
+              <th class="<%= th %> text-right">Difference</th>
+              <th class="<%= th %> text-left">Checks</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% comparison.rows.forEach((r) => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition align-top">
+                <td class="px-4 py-3 text-gray-900 dark:text-white">
+                  <% if (r.employee) { %>
+                    <a href="/employee/read/<%= r.employee.uuid %>" class="font-medium text-green-700 dark:text-green-400 hover:underline"><%= r.name %></a>
+                  <% } else { %>
+                    <span class="font-medium"><%= r.name || '—' %></span>
+                  <% } %>
+                  <% if (r.payrollCode) { %><span class="block font-mono text-xs text-gray-500 dark:text-gray-400"><%= r.payrollCode %></span><% } %>
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.gross) : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.tax) : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? `${fmtMoney(r.paid.employeeNi)} / ${fmtMoney(r.paid.employerNi)}` : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.netPay) : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.totalCost) : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums">
+                  <% if (r.employee) { %><%= r.approvedDays %> d · <%= r.approvedHours %> h<% } else { %>—<% } %>
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.employee ? fmtMoney(r.expectedGross) : '—' %></td>
+                <td class="px-4 py-3 text-right tabular-nums <%= r.flags.includes('gross-differs') || r.flags.includes('attendance-not-paid') || r.flags.includes('paid-no-attendance') ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-700 dark:text-gray-300' %>">
+                  <%= r.difference == null ? '—' : fmtMoney(r.difference) %>
+                </td>
+                <td class="px-4 py-3">
+                  <% if (!r.flags.length) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full border bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">OK</span>
+                  <% } %>
+                  <div class="flex flex-wrap gap-1">
+                    <% r.flags.forEach((f) => { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full border <%= flagPill[f] || flagPill.unmatched %>"><%= FLAGS[f] || f %></span>
+                    <% }) %>
+                  </div>
+                  <% if (r.unapprovedDays.length) { %>
+                    <span class="block mt-1 text-xs text-gray-500 dark:text-gray-400">Waiting: <%= r.unapprovedDays.join(', ') %></span>
+                  <% } %>
+                  <% if (r.flags.includes('unmatched')) { %>
+                    <a href="/payroll/staffology/employees" class="inline-block py-1 -my-1 mt-1 text-xs text-green-700 dark:text-green-400 hover:underline">Link this person</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">
+        Differences within £1 are treated as rounding. Each row compares that person's own pay period dates
+        <% if (comparison.window) { %>(here <%= comparison.window.from %> to <%= comparison.window.to %>)<% } %>.
+        Approved attendance changed after the payment date shows as "changed after the pay run closed".
+      </p>
+    <% } %>
+  <% } %>
+</div>

@@ -11,6 +11,7 @@ import { getClientIp } from '../../services/ipService.js';
 import peoplesPension from '../../services/peoplesPensionService.js';
 import ukTaxId from '../../services/ukTaxIdService.js';
 import personNotices from '../services/personNoticeService.js';
+import payrollProvider from '../services/payrollProviderService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -624,10 +625,15 @@ export const renderEmployeePayroll = async (req, res, next) => {
       } catch { niDisplay = ''; }
     }
 
+    // Recent pay from Staffology; never let a missing namespace break the page.
+    const recentPay = await payrollProvider.recentPayForEmployee(employee).catch(() => []);
+
     res.render(path.join('tailwindcss', 'payroll', 'employeePayroll'), {
       title: `Payroll Settings — ${employee.name || employee.firstName || 'Employee'}`,
       employee,
       niDisplay,
+      recentPay,
+      fmt,
       csrfToken: res.locals.csrfToken
     });
   } catch (err) { next(err); }

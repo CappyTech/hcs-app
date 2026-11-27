@@ -1,0 +1,81 @@
+<%
+  const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const unmatched = matches.filter((m) => !m.employee);
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex items-center gap-3">
+    <a href="/payroll/staffology" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Pay vs attendance</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Staffology employees</h1>
+  </div>
+
+  <p class="text-sm text-gray-700 dark:text-gray-300">
+    A Staffology employee is matched to an hcs-app employee when its payroll code equals the employee's
+    <strong>Payroll ID</strong> (Payroll settings on the employee). Linking sets that Payroll ID.
+  </p>
+
+  <% if (!matches.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No Staffology data yet — set STAFFOLOGY_API_KEY on hcs-sync.
+    </div>
+  <% } else { %>
+    <% if (unmatched.length) { %>
+      <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
+        <%= unmatched.length %> not linked to an hcs-app employee. Their pay can't be compared with attendance until they are.
+      </div>
+    <% } %>
+
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="<%= th %> text-left">Staffology employee</th>
+            <th class="<%= th %> text-left">Status</th>
+            <th class="<%= th %> text-left">Pay</th>
+            <th class="<%= th %> text-left">hcs-app employee</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% matches.forEach(({ payrollEmployee: pe, employee, suggestion }) => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition align-top">
+              <td class="px-4 py-3 text-gray-900 dark:text-white">
+                <span class="font-medium"><%= payrollName(pe) || '—' %></span>
+                <span class="block font-mono text-xs text-gray-500 dark:text-gray-400"><%= pe.PayrollCode || 'no payroll code' %></span>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                <%= pe.Status || '—' %>
+                <% if (pe.JobTitle) { %><span class="block text-xs text-gray-500 dark:text-gray-400"><%= pe.JobTitle %></span><% } %>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                <%= [pe.PayPeriod, pe.PayBasis].filter(Boolean).join(' · ') || '—' %>
+                <% if (pe.BaseHourlyRate) { %><span class="block text-xs">Hourly <%= fmtMoney(pe.BaseHourlyRate) %></span><% } %>
+                <% if (pe.BaseDailyRate) { %><span class="block text-xs">Daily <%= fmtMoney(pe.BaseDailyRate) %></span><% } %>
+              </td>
+              <td class="px-4 py-3">
+                <% if (employee) { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full border bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">Linked</span>
+                  <a href="/payroll/employee/<%= employee.uuid %>" class="ml-1 text-green-700 dark:text-green-400 hover:underline"><%= employee.name %></a>
+                <% } else if (!pe.PayrollCode) { %>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Give this person a payroll code in Staffology first.</span>
+                <% } else if (suggestion && isAdmin) { %>
+                  <form method="POST" action="/payroll/staffology/employees/<%= suggestion.uuid %>/link" class="flex items-center gap-2">
+                    <%- include('../partials/csrfHidden') %>
+                    <input type="hidden" name="payrollCode" value="<%= pe.PayrollCode %>">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Looks like <strong><%= suggestion.name %></strong></span>
+                    <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Link</button>
+                  </form>
+                <% } else if (suggestion) { %>
+                  <span class="text-sm text-gray-700 dark:text-gray-300">Looks like <strong><%= suggestion.name %></strong> (an admin can link)</span>
+                <% } else { %>
+                  <span class="text-xs text-amber-700 dark:text-amber-400">Not linked.</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">Set Payroll ID <span class="font-mono"><%= pe.PayrollCode %></span> on the employee's Payroll settings.</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

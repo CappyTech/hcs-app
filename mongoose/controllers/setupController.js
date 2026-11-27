@@ -63,6 +63,7 @@ export function envFromForm(b = {}) {
   if (s(b.mongoDbInternal)) out.MONGO_DBNAME_INTERNAL = s(b.mongoDbInternal);
   if (s(b.mongoDbPaperless)) out.MONGO_DBNAME_PAPERLESS = s(b.mongoDbPaperless);
   if (s(b.mongoDbWeb)) out.MONGO_DBNAME_WEB = s(b.mongoDbWeb);
+  if (s(b.mongoDbStaffology)) out.MONGO_DBNAME_STAFFOLOGY = s(b.mongoDbStaffology);
   return out;
 }
 
