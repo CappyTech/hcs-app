@@ -503,6 +503,7 @@
                     <% if (p.pendingDays) { %><p class="text-xs text-amber-700 dark:text-amber-400">about <%= money(p.pendingCost) %> pending</p><% } %>
                     <% if (p.uncostedDays) { %><p class="text-xs text-amber-700 dark:text-amber-400"><%= plural(p.uncostedDays, 'day') %> with no hours or day rate</p><% } %>
                     <% if (p.noHourlyRate) { %><p class="text-xs text-amber-700 dark:text-amber-400">No hourly rate on the employee</p><% } %>
+                    <% if (p.estimatedRateDays) { %><p class="text-xs text-gray-500 dark:text-gray-400"><%= plural(p.estimatedRateDays, 'day') %> at an estimated rate</p><% } %>
                   <% } else if (p.purchaseInvoices) { %>
                     <%= money(p.purchaseCost) %>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Labour invoiced over <%= plural(p.days + p.pendingDays, 'day') %> (<%= plural(p.purchaseInvoices, 'invoice') %>)</p>

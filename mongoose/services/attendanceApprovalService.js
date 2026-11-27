@@ -26,13 +26,16 @@
  *   is not told: it is only half way.
  *
  * Payroll reads only `approved` (payrollCalculationService), and holiday
- * accrual runs only on the final step.
+ * accrual runs only on the final step. The final step also saves the
+ * employee's current hourly rate on each employee day it approves
+ * (attendanceRateService), unless the day already has its pay run rate.
  */
 import mdb from './mongooseDatabaseService.js';
 import projectScope from './projectScopeService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import { matchesFilter } from '../../services/dataScopingService.js';
 import personNotices from './personNoticeService.js';
+import attendanceRates from './attendanceRateService.js';
 
 export const AWAITING = ['pending', 'site-approved'];
 /** Statuses an approver can move on: the plan as well as what's waiting. */
@@ -226,6 +229,7 @@ export async function approveOne(req, uuid, db = mdb) {
   );
   if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
   if (d.next === 'approved') {
+    await attendanceRates.stampApproved([updated], db);
     await personNotices.attendanceDecided({ action: 'approved', records: [plain(updated)], actorId: req.user._id, db });
   }
   return { ok: true, next: d.next, record: updated };
@@ -338,6 +342,8 @@ export async function approveRange(req, start, end, db = mdb) {
   const approved = approvedIds.length
     ? await db.INTERNAL.attendance.find({ _id: { $in: approvedIds }, status: 'approved' })
     : [];
+  // Save each employee day's rate as it is approved
+  if (approved.length) await attendanceRates.stampApproved(approved, db);
   // One notice per person for everything this approval moved to approved
   if (approved.length) {
     await personNotices.attendanceDecided({ action: 'approved', records: approved.map(plain), actorId: req.user._id, db });
