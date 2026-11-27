@@ -316,6 +316,165 @@ export async function recentPayForEmployee(employee, limit = 6) {
   return Entry.find({ PayrollCode: String(code).trim() }).sort({ PaymentDate: -1, StartDate: -1 }).limit(limit).lean();
 }
 
+// ── Staffology mode pages (dashboard, runs, employee, My pay) ────────────────
+
+const TOTAL_KEYS = ['Gross', 'Tax', 'EmployeeNi', 'EmployerNi', 'EmployeePension', 'EmployerPension', 'NetPay', 'TakeHomePay', 'TotalCost'];
+const sumTotals = () => Object.fromEntries(TOTAL_KEYS.map((k) => [k, { $sum: { $ifNull: [`$Totals.${k}`, 0] } }]));
+const pickTotals = (r) => Object.fromEntries(TOTAL_KEYS.map((k) => [k, round2(toNum(r[k]))]));
+
+/** Add up the totals of a list of entries (pure). */
+export function addTotals(entries = []) {
+  const out = Object.fromEntries(TOTAL_KEYS.map((k) => [k, 0]));
+  for (const e of entries) for (const k of TOTAL_KEYS) out[k] += toNum(e?.Totals?.[k]);
+  return Object.fromEntries(TOTAL_KEYS.map((k) => [k, round2(out[k])]));
+}
+
+/** Every synced pay run (one per period + ordinal), newest first, with totals. */
+export async function listRuns({ taxYear } = {}) {
+  const { Entry } = models();
+  if (!Entry) return [];
+  const match = taxYear ? [{ $match: { TaxYear: Number(taxYear) } }] : [];
+  const rows = await Entry.aggregate([
+    ...match,
+    { $group: {
+      _id: { TaxYear: '$TaxYear', PayPeriod: '$PayPeriod', Period: '$Period', Ordinal: { $ifNull: ['$Ordinal', 1] } },
+      StartDate: { $min: '$StartDate' },
+      EndDate: { $max: '$EndDate' },
+      PaymentDate: { $max: '$PaymentDate' },
+      people: { $sum: 1 },
+      open: { $sum: { $cond: [{ $eq: ['$IsClosed', true] }, 0, 1] } },
+      ...sumTotals(),
+    } },
+    { $sort: { StartDate: -1, '_id.Ordinal': 1 } },
+  ]);
+  return rows.map((r) => ({
+    ...r._id, StartDate: r.StartDate, EndDate: r.EndDate, PaymentDate: r.PaymentDate,
+    people: r.people, closed: r.open === 0, totals: pickTotals(r),
+  }));
+}
+
+/** Tax years present in the synced data, newest first. */
+export async function listTaxYears() {
+  const { Entry } = models();
+  if (!Entry) return [];
+  return (await Entry.distinct('TaxYear')).filter((y) => Number.isFinite(y)).sort((a, b) => b - a);
+}
+
+/**
+ * Pay grouped by tax month (1 = April) from the payment date, for one tax year
+ * (pure). Entries without a payment date fall back to their end date.
+ */
+export function groupByTaxMonth(entries = [], taxYear) {
+  const months = new Map();
+  for (const e of entries) {
+    const d = e.PaymentDate || e.EndDate;
+    if (!d) continue;
+    const [y, m, day] = dayKey(d).split('-').map(Number);
+    // Tax month n runs from the 6th of month (n + 3) to the 5th of the next.
+    let monthIndex = (y - taxYear) * 12 + (m - 4) - (day < 6 ? 1 : 0);
+    const taxMonth = monthIndex + 1;
+    if (taxMonth < 1 || taxMonth > 12) continue;
+    if (!months.has(taxMonth)) months.set(taxMonth, { taxMonth, entries: [] });
+    months.get(taxMonth).entries.push(e);
+  }
+  return [...months.values()]
+    .sort((a, b) => a.taxMonth - b.taxMonth)
+    .map((m) => ({ taxMonth: m.taxMonth, people: new Set(m.entries.map((e) => e.PayrollCode)).size, runs: new Set(m.entries.map(periodKey)).size, totals: addTotals(m.entries) }));
+}
+
+/** Monthly summary for the overview panel. */
+export async function monthlySummary(taxYear) {
+  const { Entry } = models();
+  if (!Entry) return { taxYear, months: [], totals: addTotals([]) };
+  const entries = await Entry.find({ TaxYear: Number(taxYear) }).select('PayrollCode TaxYear PayPeriod Period Ordinal PaymentDate EndDate Totals').lean();
+  return { taxYear: Number(taxYear), months: groupByTaxMonth(entries, Number(taxYear)), totals: addTotals(entries) };
+}
+
+/** Dashboard figures for one tax year. */
+export async function dashboardSummary(taxYear) {
+  const { Entry, PayrollEmployee } = models();
+  const Employee = mdb.INTERNAL?.employee;
+  if (!Entry) return { taxYear, runs: [], totals: addTotals([]), latest: null, unlinked: 0 };
+  const [runs, entries] = await Promise.all([
+    listRuns({ taxYear }),
+    Entry.find({ TaxYear: Number(taxYear) }).select('Totals').lean(),
+  ]);
+  let unlinked = 0;
+  if (PayrollEmployee && Employee) {
+    const [pes, emps] = await Promise.all([
+      PayrollEmployee.find({ Status: { $ne: 'Former' } }).select('PayrollCode Status').lean(),
+      Employee.find({}).select('payroll.payrollId').lean(),
+    ]);
+    const codes = employeesByPayrollCode(emps);
+    unlinked = pes.filter((pe) => !codes.has(normCode(pe.PayrollCode))).length;
+  }
+  const latest = runs[0] ? { ...runs[0], comparison: await loadComparison(runs[0]) } : null;
+  return { taxYear: Number(taxYear), runs: runs.slice(0, 10), totals: addTotals(entries), latest, unlinked };
+}
+
+/** Every pay entry for a payroll code, newest first. */
+export async function entriesForPayrollCode(code) {
+  const { Entry } = models();
+  if (!Entry || !code) return [];
+  return Entry.find({ PayrollCode: String(code).trim() }).sort({ PaymentDate: -1, StartDate: -1 }).lean();
+}
+
+/** The Staffology employee record for a payroll code. */
+export async function payrollEmployeeByCode(code) {
+  const { PayrollEmployee } = models();
+  if (!PayrollEmployee || !code) return null;
+  return PayrollEmployee.findOne({ PayrollCode: String(code).trim() }).lean();
+}
+
+/** One pay entry by its hcs uuid. */
+export async function entryByUuid(uuid) {
+  const { Entry } = models();
+  if (!Entry || !uuid) return null;
+  return Entry.findOne({ uuid: String(uuid) }).lean();
+}
+
+/** Entries grouped by tax year with year-to-date totals (pure), newest year first. */
+export function groupByTaxYear(entries = []) {
+  const years = new Map();
+  for (const e of entries) {
+    const y = e.TaxYear;
+    if (!years.has(y)) years.set(y, []);
+    years.get(y).push(e);
+  }
+  return [...years.entries()].sort((a, b) => b[0] - a[0]).map(([taxYear, list]) => ({ taxYear, entries: list, totals: addTotals(list) }));
+}
+
+/**
+ * A closed Staffology pay entry covering a date, shaped like the payroll run (status 'paid')
+ * attendanceService.getLockedRunForDate returns, so attendance in a paid week
+ * is locked the same way. null when none.
+ */
+export async function closedRunForDate(date) {
+  const { Entry } = models();
+  if (!Entry || !date) return null;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  // Stored dates are London midnights; a day's slack either side.
+  const e = await Entry.findOne({
+    IsClosed: true,
+    StartDate: { $lte: new Date(d.getTime() + 86400000) },
+    EndDate: { $gte: new Date(d.getTime() - 86400000) },
+  }).sort({ PaymentDate: -1 }).lean();
+  if (!e) return null;
+  const k = dayKey(d);
+  if (k < dayKey(e.StartDate) || k > dayKey(e.EndDate)) return null;
+  return {
+    source: 'staffology',
+    taxYear: e.TaxYear,
+    taxMonth: null,
+    taxWeek: /week/i.test(e.PayPeriod || '') ? e.Period : null,
+    frequency: String(e.PayPeriod || '').toLowerCase(),
+    status: 'paid',
+    periodStart: e.StartDate,
+    periodEnd: e.EndDate,
+  };
+}
+
 export default {
   FLAGS,
   GROSS_TOLERANCE,
@@ -331,4 +490,15 @@ export default {
   loadComparison,
   loadEmployeeMatches,
   recentPayForEmployee,
+  addTotals,
+  listRuns,
+  listTaxYears,
+  groupByTaxMonth,
+  monthlySummary,
+  dashboardSummary,
+  entriesForPayrollCode,
+  payrollEmployeeByCode,
+  entryByUuid,
+  groupByTaxYear,
+  closedRunForDate,
 };

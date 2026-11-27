@@ -131,6 +131,13 @@ export default {
         department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    MyPay: {
+        title: 'My pay',
+        description: 'Your pay from Staffology, week by week, with your payslips.',
+        link: '/my-pay',
+        department: ['user'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     UserSettings: {
         title: 'Settings',
         description: 'Manage your account, password, preferences, and two-factor authentication.',

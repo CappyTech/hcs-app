@@ -1,6 +1,7 @@
 import rbac from '../config/rolePermissionsConfig.js';
 import apiDocs from '../config/apiDocsConfig.js';
 import modules from '../../services/moduleService.js';
+import { isStaffologyMode } from '../../services/staffologyModeService.js';
 
 const helpContent = [
   // ─────────────────────────────────────────────────────────────────────────
@@ -1152,7 +1153,43 @@ const helpContent = [
     borderClass: 'border-lime-500',
     articles: [
       {
+        id: 'payroll-staffology',
+        payrollMode: 'staffology',
+        title: 'Payroll in Staffology',
+        badge: 'Admin / Accountant',
+        groups: [['payroll', 'view']],
+        description: 'Payroll is run in Staffology. hcs-app shows each pay run, compares it with approved attendance, and opens payslips. Pay runs, HMRC submissions and pensions are done in Staffology itself.',
+        steps: [
+          'The payroll dashboard (/payroll/dashboard) shows this tax year’s totals, the latest pay run and anything that needs a look.',
+          'Pay runs (/payroll/runs) lists every Staffology pay run. Open one to compare each person’s pay with their approved attendance.',
+          'Link each Staffology employee to their hcs-app employee on Staffology employees (/payroll/staffology/employees), or set the Payroll ID on the employee’s payroll page.',
+          'Open a payslip from a pay run or an employee’s payroll page. It is fetched from Staffology each time and not kept in hcs-app.',
+        ],
+        notes: [
+          'hcs-sync copies Staffology into hcs-app after each sync. Use Sync Staffology now on the sync dashboard for an immediate update.',
+          'Once Staffology closes a pay run, attendance in that pay period is locked. Only an admin can still change it.',
+          'Staffology mode is on while the Staffology API key is saved and its connection test (Settings → Connections → Staffology) last passed. Changing the key or employer turns it off until the test passes again.',
+        ],
+      },
+      {
+        id: 'my-pay',
+        payrollMode: 'staffology',
+        title: 'My pay and payslips',
+        badge: 'Admin / Employee / Subcontractor',
+        description: 'My pay (/my-pay) shows your own pay from Staffology, week by week, with your payslips.',
+        steps: [
+          'Open My pay from your home page, or go to /my-pay.',
+          'Each pay period shows gross pay, tax, National Insurance, pension and what you took home, with totals for the tax year.',
+          'Press Payslip to open that week’s payslip.',
+        ],
+        notes: [
+          'If My pay says your pay is not linked yet, ask payroll to link you to your Staffology record.',
+          'Only you (and payroll) can see your pay.',
+        ],
+      },
+      {
         id: 'payroll-runs',
+        payrollMode: 'engine',
         title: 'Running Payroll',
         badge: 'Admin / Accountant',
         groups: [['payroll', 'view']],
@@ -1173,6 +1210,7 @@ const helpContent = [
       },
       {
         id: 'payroll-submissions',
+        payrollMode: 'engine',
         title: 'HMRC Submissions & Pensions',
         badge: 'Admin / Accountant',
         groups: [['payroll', 'view']],
@@ -1939,6 +1977,8 @@ export const getHelp = function (req, res) {
       ...cat,
       articles: cat.articles.filter(art => {
         if (!modules.isHelpEnabled(art.id)) return false;
+        // Engine payroll help and Staffology payroll help each show in their own mode.
+        if (art.payrollMode && art.payrollMode !== (isStaffologyMode() ? 'staffology' : 'engine')) return false;
         // `groups: [[group, level], ...]` also opens an article to any job
         // role holding one of those permission groups at that level.
         if (art.groups && art.groups.some(([g, lvl]) => rbac.hasGroup(req.user, g, lvl))) return true;

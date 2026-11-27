@@ -20,6 +20,8 @@ import smsService from '../../services/smsService.js';
 import emailService from '../../services/emailService.js';
 import paperlessClient from '../services/paperless/paperlessClient.js';
 import oneDriveFolderService from '../../services/oneDriveFolderService.js';
+import staffologyMode from '../../services/staffologyModeService.js';
+import jobStateService from '../services/jobStateService.js';
 
 // ── Live connection tests ────────────────────────────────────────────────────
 
@@ -154,8 +156,11 @@ export const testConnection = async (req, res) => {
   try {
     const message = await test();
     logger.info(`[connectionSettings] test ${service}: OK — ${message}`);
-    req.flash('success', message);
+    // A passed Staffology test is what switches payroll to Staffology mode.
+    if (service === 'staffology') await staffologyMode.setVerified(true, jobStateService);
+    req.flash('success', service === 'staffology' ? `${message} Payroll pages now show Staffology.` : message);
   } catch (err) {
+    if (service === 'staffology') await staffologyMode.setVerified(false, jobStateService);
     logger.warn(`[connectionSettings] test ${service}: FAILED — ${err.message}`);
     // Say what to do next, unless the service message already does
     const hint = /\bcheck\b/i.test(err.message) ? '' : ' Check the settings on this page, save them, then test again.';

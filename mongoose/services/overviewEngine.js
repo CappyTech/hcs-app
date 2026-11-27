@@ -12,6 +12,7 @@ import { cisSupplierQuery } from '../../services/cisService.js';
 import taxService from '../../services/taxService.js';
 import { formatInTimeZone } from 'date-fns-tz';
 import weeklyFlowService from './weeklyFlowService.js';
+import staffologyMode from '../../services/staffologyModeService.js';
 
 /**
  * Overview engine: turns the definitions in config/overviews into page data.
@@ -136,6 +137,7 @@ async function scopedFilter(req, node, where, now) {
 
 // Where a node leads: its overview if the user can open it, else its list.
 function nodeHref(req, node) {
+  if (staffologyMode.hidesModel(node.model)) return null; // payroll engine, Staffology mode
   if (node.overviewPath && canOpenPath(req, node.overviewPath)) return node.overviewPath;
   if (node.model && node.listPath && canSeeNode(req, node)) return node.listPath;
   return null;
@@ -677,7 +679,7 @@ async function buildArea(req, areaId, now = new Date()) {
 
 async function buildNodeOverview(req, nodeId, now = new Date()) {
   const node = registry.getNode(nodeId);
-  if (!node?.overview || node.hidden) return null;
+  if (!node?.overview || node.hidden || staffologyMode.hidesModel(node.model)) return null;
   const ov = node.overview;
   const [figures, breakdowns, lists, panels, related] = await Promise.all([
     computeFigures(req, node, ov.figures, now),

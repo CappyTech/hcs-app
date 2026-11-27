@@ -1,0 +1,22 @@
+<%#
+  My pay (staffologyPayrollController.renderMyPay): the signed-in person's own
+  Staffology pay entries and payslips. Locals: linked, years, fmtMoney, fmtDate, taxYearLabel.
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">My pay</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Your pay from Staffology, newest first. Press Payslip to open that week's payslip.</p>
+  </div>
+
+  <% if (!linked) { %>
+    <div class="text-sm text-gray-500 dark:text-gray-400 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      Your pay isn't linked yet. Ask payroll to link your account to your Staffology record.
+    </div>
+  <% } else if (!years.length) { %>
+    <div class="text-sm text-gray-500 dark:text-gray-400 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No pay has come through from Staffology yet.
+    </div>
+  <% } else { %>
+    <%- include('../payroll/_staffologyPayYears', { years, payslipHref: (e) => `/my-pay/${encodeURIComponent(e.uuid)}/payslip`, fmtMoney, fmtDate, taxYearLabel }) %>
+  <% } %>
+</div>

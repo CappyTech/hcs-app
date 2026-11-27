@@ -10,6 +10,7 @@ import holidayService from '../services/holidayService.js';
 import { getFrequentPages } from '../services/sessionActivityService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import departments from '../config/departmentsConfig.js';
+import staffologyMode from '../../services/staffologyModeService.js';
 import overviews from '../config/overviews/index.js';
 import { canUserOpenPath } from '../services/overviewAccess.js';
 import modules from '../../services/moduleService.js';
@@ -39,6 +40,9 @@ const canUseTile = (tile, userRole) => {
   // A tile for a module the company has switched off is gone for everyone.
   if (tile?.link && String(tile.link).startsWith('/') && !modules.isPathEnabled(tile.link)) return false;
   if (tile?.model && !modules.isModelEnabled(tile.model)) return false;
+  // Payroll in Staffology: engine tiles go; outside it, Staffology-only ones do.
+  if (tile?.link && String(tile.link).startsWith('/') && staffologyMode.hidesPath(tile.link)) return false;
+  if (tile?.model && staffologyMode.hidesModel(tile.model)) return false;
   if (userRole === 'admin' || (Array.isArray(userRole) && userRole.includes('admin'))) return !tile?.hideFromAdmin;
   const link = String(tile?.link || '');
   if (!link.startsWith('/')) return true; // external link

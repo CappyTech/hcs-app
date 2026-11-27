@@ -92,6 +92,7 @@
                     <span class="font-medium"><%= r.name || '—' %></span>
                   <% } %>
                   <% if (r.payrollCode) { %><span class="block font-mono text-xs text-gray-500 dark:text-gray-400"><%= r.payrollCode %></span><% } %>
+                  <% if (r.entry?.uuid) { %><a href="/payroll/staffology/payslip/<%= encodeURIComponent(r.entry.uuid) %>" target="_blank" rel="noopener" class="inline-block py-1 -my-1 text-xs text-green-700 dark:text-green-400 hover:underline">Payslip</a><% } %>
                 </td>
                 <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.gross) : '—' %></td>
                 <td class="px-4 py-3 text-right tabular-nums"><%= r.paid ? fmtMoney(r.paid.tax) : '—' %></td>

@@ -86,10 +86,13 @@ export default [
     path: '/overview/payroll',
     label: 'Payroll',
     icon: 'bi-cash-coin',
-    description: 'Pay runs, year-to-date totals and HMRC submissions.',
+    description: 'Pay runs, year-to-date totals and HMRC submissions. When payroll is run in Staffology, the pay runs and payslips come from there.',
     children: ['payrollRun', 'payrollSubmission'],
-    // Shown only to those who can open the route (rolePermissionsConfig)
+    // Shown only to those who can open the route (rolePermissionsConfig). In
+    // Staffology mode the two children are hidden and these are the way in.
     actions: [
+      { label: 'Payroll dashboard', href: '/payroll/dashboard', route: '/payroll/dashboard', icon: 'bi-speedometer2' },
+      { label: 'Pay runs', href: '/payroll/runs', route: '/payroll/runs', icon: 'bi-cash-stack' },
       { label: 'Staffology pay vs attendance', href: '/payroll/staffology', route: '/payroll/staffology', icon: 'bi-clipboard-check' },
       { label: 'Staffology employees', href: '/payroll/staffology/employees', route: '/payroll/staffology/employees', icon: 'bi-people' },
     ],

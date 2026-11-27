@@ -85,8 +85,8 @@ export default [
   {
     id: 'payroll',
     label: 'Payroll',
-    description: 'Pay runs, PAYE and National Insurance, pensions and HMRC RTI submissions. Switch off if payroll is done elsewhere.',
-    paths: ['/payroll', '/settings/payroll', '/overview/payroll'],
+    description: 'Pay runs, PAYE and National Insurance, pensions and HMRC RTI submissions, or, once Staffology is connected and tested, the pay runs, payslips and My pay pages from Staffology. Switch off if payroll is done elsewhere and not wanted here.',
+    paths: ['/payroll', '/settings/payroll', '/overview/payroll', '/my-pay'],
     models: ['payrollRun', 'payrollSubmission', 'payrollConfig', 'payrollEntry', 'payrollTaxRates'],
     departments: ['payroll'],
     help: ['payroll'],

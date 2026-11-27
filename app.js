@@ -88,6 +88,7 @@ import { paperlessUiBase as __paperlessUiBase } from './mongoose/services/paperl
 import __organisation from './services/organisationService.js';
 import __brand from './services/brandService.js';
 import __moduleService from './services/moduleService.js';
+import __staffologyMode from './services/staffologyModeService.js';
 import { migrateLegacyKinds as __migrateNotificationKinds } from './mongoose/services/paperless/notificationLogService.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
 import __bankRoutes from './mongoose/routes/bankRoutes.js';
@@ -107,6 +108,7 @@ import __microsoftSsoRoutes from './mongoose/routes/microsoftSsoRoutes.js';
 import __helpRoutes from './mongoose/routes/helpRoutes.js';
 import __searchRoutes from './mongoose/routes/searchRoutes.js';
 import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
+import __myPayRoutes from './mongoose/routes/myPayRoutes.js';
 import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
 import __sessionTimeoutRoutes, { exposeSessionExpiry } from './mongoose/routes/sessionTimeoutRoutes.js';
@@ -511,6 +513,15 @@ const main = async () => {
       logger.error('[migration] Payroll tax rate seeding failed', { error: seedErr.message });
     }
 
+    // Staffology mode: read the last passed connection test's fingerprint so
+    // isStaffologyMode() can answer synchronously.
+    try {
+      const { default: jobState } = await import('./mongoose/services/jobStateService.js');
+      await __staffologyMode.load(jobState);
+    } catch (modeErr) {
+      logger.warn('[staffology] could not read the mode switch: ' + modeErr.message);
+    }
+
     // Seed the core email/notification type catalog (insert-only — admin edits
     // in Settings → Emails are preserved).
     try {
@@ -659,6 +670,9 @@ const main = async () => {
     // (admins too). After the view locals so the error page renders normally,
     // and before the route rule, which would otherwise answer 403 first.
     appRouter.use(__moduleService.gate);
+    // Payroll run in Staffology (key saved + connection test passed): the
+    // in-house pay-run pages redirect to their Staffology counterparts.
+    appRouter.use(__staffologyMode.gate);
     appRouter.use(authService.ensureRouteAccess);
     // BASE_URL, if nobody has set it, is how the first authenticated user
     // reached the app. CSP's own-origin entries derive from it.
@@ -794,6 +808,7 @@ const main = async () => {
     appRouter.use('/', __helpRoutes);
     appRouter.use('/', __searchRoutes);
     appRouter.use('/', __payrollRoutes);
+    appRouter.use('/', __myPayRoutes);
     appRouter.use('/', __gdprRoutes);
     appRouter.use('/', __legalRoutes);
     appRouter.use('/', __rolesGuideRoutes);

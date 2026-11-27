@@ -1,6 +1,7 @@
 import rbac from '../config/rolePermissionsConfig.js';
 import registry from '../config/overviews/index.js';
 import modules from '../../services/moduleService.js';
+import staffologyMode from '../../services/staffologyModeService.js';
 
 /**
  * May this person open an overview page? One rule for every page: a
@@ -15,6 +16,8 @@ export function canUserOpenPath(user, path) {
   if (!user || !path) return false;
   // Pages of a module the company has switched off stay closed to everyone.
   if (!modules.isPathEnabled(path)) return false;
+  // Payroll in Staffology hides the in-house engine's pages (and vice versa).
+  if (staffologyMode.hidesPath(path)) return false;
   const role = rbac.rolesOf(user);
   const custom = user.customPermissions || {};
   if (rbac.getAllowedRolesForRoute(path) || role.includes('admin')) return rbac.canAccessRoute(role, path, custom);

@@ -3,6 +3,14 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/payrollController.js';
 import provider from '../controllers/payrollProviderController.js';
+import staffologyPayroll from '../controllers/staffologyPayrollController.js';
+import { isStaffologyMode } from '../../services/staffologyModeService.js';
+
+// Staffology mode (Settings → Connections → Staffology, key saved and test
+// passed): the pages that stay show Staffology data instead of the in-house
+// engine. The engine-only pages are redirected earlier, by the gate in app.js.
+const byMode = (staffology, engine) => (req, res, next) =>
+  (isStaffologyMode() ? staffology : engine)(req, res, next);
 
 // Permission groups (accessGroupsConfig), Payroll:
 //   view    — dashboard, runs, submissions log, FPS/EPS/pension downloads
@@ -18,13 +26,13 @@ import provider from '../controllers/payrollProviderController.js';
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get('/payroll/dashboard',
   authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
-  ctrl.renderDashboard
+  byMode(staffologyPayroll.renderDashboard, ctrl.renderDashboard)
 );
 
 // ── Run list ──────────────────────────────────────────────────────────────────
 router.get('/payroll/runs',
   authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
-  ctrl.renderRunList
+  byMode(staffologyPayroll.renderRuns, ctrl.renderRunList)
 );
 
 // ── Create new run ────────────────────────────────────────────────────────────
@@ -138,6 +146,11 @@ router.get('/payroll/staffology/employees',
   authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   provider.renderEmployees
 );
+// One payslip PDF, fetched live from Staffology (never stored).
+router.get('/payroll/staffology/payslip/:entryUuid',
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
+  staffologyPayroll.staffPayslip
+);
 router.post('/payroll/staffology/employees/:uuid/link',
   authService.ensureRole('admin'),
   provider.linkEmployee
@@ -146,11 +159,11 @@ router.post('/payroll/staffology/employees/:uuid/link',
 // ── Employee payroll settings ─────────────────────────────────────────────────
 router.get('/payroll/employee/:uuid',
   authService.ensureGroup('payroll', 'edit'),
-  ctrl.renderEmployeePayroll
+  byMode(staffologyPayroll.renderEmployeePayroll, ctrl.renderEmployeePayroll)
 );
 router.post('/payroll/employee/:uuid',
   authService.ensureGroup('payroll', 'edit'),
-  ctrl.saveEmployeePayroll
+  byMode(staffologyPayroll.saveEmployeePayrollId, ctrl.saveEmployeePayroll)
 );
 
 export default router;
