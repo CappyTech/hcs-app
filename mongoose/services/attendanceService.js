@@ -6,6 +6,7 @@ import taxService from '../../services/taxService.js';
 import { jobLabel } from './jobRegisterService.js';
 import { HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
 import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
+import { isStaffologyMode } from '../../services/staffologyModeService.js';
 
 const TZ = 'Europe/London';
 
@@ -801,6 +802,12 @@ const fetchVehicleDeploymentsForWeek = async (start, end) => {
  * periods can't be silently retro-edited. Returns the blocking run or null.
  */
 const getLockedRunForDate = async (date) => {
+  // Payroll run in Staffology: a week is locked once Staffology has closed the
+  // pay run covering it (same shape as an engine run, status 'paid').
+  if (isStaffologyMode()) {
+    const { closedRunForDate } = await import('./payrollProviderService.js');
+    return closedRunForDate(date);
+  }
   const PayrollRun = mdb.INTERNAL?.payrollRun;
   if (!PayrollRun || !date) return null;
   const d = new Date(date);

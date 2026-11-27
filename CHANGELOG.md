@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.158.0] - 2026-11-27
+
+### Added
+- **Staffology payroll mode.** Payroll switches to Staffology when a Staffology API key is saved **and** the Test button on Settings → Connections → Staffology last passed for that key and employer. The test stores a one-way fingerprint of the two, so changing either turns the mode off until the test passes again. In Staffology mode:
+  - `/payroll/dashboard` shows Staffology instead: tax-year totals (gross, tax, NI, pensions, net, total cost), the latest pay run against approved attendance, a tax-month breakdown, recent pay runs, and a note when current Staffology employees aren't linked.
+  - `/payroll/runs` lists every Staffology pay run, with dates, people, totals and open/closed state. Each run opens the pay vs attendance comparison.
+  - `/payroll/employee/:uuid` shows the person's Staffology record and their pay by tax year, with payslips. Only the Payroll ID (the link to Staffology) can be edited.
+  - The in-house pay-run tools are hidden and redirect to their Staffology counterparts: run detail, create, calculate, override, lock/unlock, KashFlow journal, FPS/EPS, pension, the submissions log, payroll settings and tax rates. Their generic pages, overview cards and help articles are hidden too. Nothing is deleted; switching the mode off brings them back.
+  - Attendance in a pay period Staffology has closed is locked for everyone except admins, as it was for locked hcs-app runs.
+- **Payslips** from Staffology's payslip report, fetched live per pay entry and streamed back. They are never stored. Linked from the pay vs attendance page, the employee payroll page and My pay. Each view is audit-logged.
+- **My pay** (`/my-pay`, Staffology mode only): a signed-in person's own pay by tax year with year-to-date totals and payslips, through their linked employee's Payroll ID. Anyone else's payslip answers 404. There is a My pay tile on the personal dashboard and a help article.
+- Payroll overview actions for the payroll dashboard and pay runs.
+
 ## [6.157.0] - 2026-11-27
 
 ### Added

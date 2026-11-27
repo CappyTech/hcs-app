@@ -19,6 +19,7 @@ import accessGroups from './accessGroupsConfig.js';
 // Optional modules a company has switched off (modulesConfig). Checked first in
 // every access function below, admins included: an off module is off for all.
 import modules from '../../services/moduleService.js';
+import staffologyMode from '../../services/staffologyModeService.js';
 
 // ── Departments each role may access ──────────────────────────────────
 // Derived from departmentsConfig roles: ['public'] departments go to every
@@ -321,6 +322,11 @@ const routeAccess = {
   '/payroll/submissions': ['admin', 'accountant'],
   '/payroll/staffology':  ['admin', 'accountant'],
   '/payroll/staffology/employees': ['admin', 'accountant'],
+  '/payroll/staffology/payslip/:entryUuid': ['admin', 'accountant'],
+  // My pay (Staffology mode only): anyone signed in; the page itself shows only
+  // the user's own pay, through their linked employee.
+  '/my-pay':              '*',
+  '/my-pay/:entryUuid/payslip': '*',
   // Legacy dashboard URLs that now redirect (kashflow → finance,
   // paperless dashboard → documents; /paperless/* OCR routes listed below)
   '/kashflow':            ['admin', 'accountant'],
@@ -692,6 +698,7 @@ function getDepartmentsForRole(role, customPerms) {
  */
 function canAccess(role, model, operation, customPerms) {
   if (!modules.isModelEnabled(model)) return { allowed: false, ownOnly: false };
+  if (staffologyMode.hidesModel(model)) return { allowed: false, ownOnly: false };
   const roles = toRoles(role);
   if (roles.includes('admin')) return { allowed: true, ownOnly: false };
 
@@ -800,6 +807,7 @@ function matchRoutePattern(reqPath) {
  */
 function canAccessRoute(role, routePattern, customPerms) {
   if (!modules.isPathEnabled(routePattern)) return false;
+  if (staffologyMode.hidesPath(routePattern)) return false;
   const roles = toRoles(role);
   if (roles.includes('admin')) return true;
   const allowed = routeAccess[routePattern];
@@ -855,7 +863,7 @@ function getListableModels(role, customPerms) {
       ? [...customPerms.models.entries()]
       : Object.entries(customPerms.models);
     for (const [model, perms] of entries) {
-      if (seen.has(model) || !modules.isModelEnabled(model)) continue;
+      if (seen.has(model) || !modules.isModelEnabled(model) || staffologyMode.hidesModel(model)) continue;
       for (const { op } of parsePerms(perms)) {
         if (op === 'l') { result.push({ model, ownOnly: false }); seen.add(model); break; }
       }

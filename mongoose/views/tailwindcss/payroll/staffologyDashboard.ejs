@@ -1,0 +1,127 @@
+<%#
+  Payroll dashboard in Staffology mode (staffologyPayrollController.renderDashboard).
+  Locals: years, taxYear, summary { totals, runs, latest { ...run, comparison }, unlinked },
+          monthly { months, totals }, FLAGS, fmtMoney, fmtDate, taxYearLabel, periodKey.
+%>
+<%
+  const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4';
+  const monthName = (m) => ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'][(m - 1) % 12];
+  const runLabel = (r) => `${r.PayPeriod} ${r.Period}${r.Ordinal > 1 ? ` (run ${r.Ordinal})` : ''}`;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Payroll</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Run in Staffology. Pay runs, HMRC submissions and pensions are done there; hcs-app shows the results.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="/payroll/runs" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-cash-stack"></i> Pay runs</a>
+      <a href="/payroll/staffology/employees" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-people"></i> Staffology employees</a>
+      <a href="https://app.staffology.co.uk/home/dashboard" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-box-arrow-up-right"></i> Open Staffology</a>
+    </div>
+  </div>
+
+  <% if (!summary) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No Staffology pay runs have been synced yet. Run "Sync Staffology now" on the sync dashboard.
+    </div>
+  <% } else { %>
+
+    <form method="GET" action="/payroll/dashboard" class="flex gap-2 flex-wrap items-center">
+      <label for="f-year" class="text-sm font-medium text-gray-500 dark:text-gray-400">Tax year</label>
+      <select id="f-year" name="year" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+        <% years.forEach((y) => { %><option value="<%= y %>" <%= y === taxYear ? 'selected' : '' %>><%= taxYearLabel(y) %></option><% }) %>
+      </select>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Show</button>
+    </form>
+
+    <% if (summary.unlinked) { %>
+      <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
+        <%= summary.unlinked %> current Staffology <%= summary.unlinked === 1 ? 'employee is' : 'employees are' %> not linked to an hcs-app employee, so their pay can't be compared with attendance.
+        <a href="/payroll/staffology/employees" class="font-medium underline hover:no-underline">Link them</a>
+      </div>
+    <% } %>
+
+    <section>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3"><%= taxYearLabel(taxYear) %> to date</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <% [['Gross pay', summary.totals.Gross], ['Tax', summary.totals.Tax], ['Employee NI', summary.totals.EmployeeNi], ['Employer NI', summary.totals.EmployerNi],
+            ['Employee pension', summary.totals.EmployeePension], ['Employer pension', summary.totals.EmployerPension], ['Net pay', summary.totals.NetPay], ['Total cost', summary.totals.TotalCost]].forEach(([label, value]) => { %>
+          <div class="<%= card %>">
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400"><%= label %></p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums"><%= fmtMoney(value) %></p>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <% if (summary.latest) { const l = summary.latest; %>
+      <section class="<%= l.comparison.flagged ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20' : 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' %> border rounded-xl shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Latest pay run</p>
+          <p class="text-base font-semibold text-gray-900 dark:text-gray-100"><%= runLabel(l) %> · paid <%= fmtDate(l.PaymentDate) %> · <%= l.people %> <%= l.people === 1 ? 'person' : 'people' %></p>
+          <p class="text-sm <%= l.comparison.flagged ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400' %>">
+            <%= l.comparison.flagged ? `${l.comparison.flagged} need a look against approved attendance` : 'Everyone matches their approved attendance' %>
+          </p>
+        </div>
+        <a href="/payroll/staffology?period=<%= encodeURIComponent(periodKey(l)) %>" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Compare with attendance</a>
+      </section>
+    <% } %>
+
+    <% if (monthly && monthly.months.length) { %>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+        <h2 class="px-5 pt-5 pb-3 text-base font-semibold text-gray-800 dark:text-gray-200">By tax month</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="<%= th %> text-left">Month</th>
+                <th class="<%= th %> text-right">Runs</th>
+                <th class="<%= th %> text-right">People</th>
+                <th class="<%= th %> text-right">Gross</th>
+                <th class="<%= th %> text-right">Tax</th>
+                <th class="<%= th %> text-right">NI (ee / er)</th>
+                <th class="<%= th %> text-right">Net</th>
+                <th class="<%= th %> text-right">Total cost</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% monthly.months.forEach((m) => { %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  <td class="px-4 py-3 text-gray-900 dark:text-white">M<%= m.taxMonth %> · <%= monthName(m.taxMonth) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= m.runs %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= m.people %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.Gross) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.Tax) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.EmployeeNi) %> / <%= fmtMoney(m.totals.EmployerNi) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.NetPay) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.TotalCost) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (summary.runs.length) { %>
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recent pay runs</h2>
+          <a href="/payroll/runs?year=<%= taxYear %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">All pay runs</a>
+        </div>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+          <% summary.runs.forEach((r) => { %>
+            <li class="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+              <a href="/payroll/staffology?period=<%= encodeURIComponent(periodKey(r)) %>" class="font-medium text-green-700 dark:text-green-400 hover:underline"><%= runLabel(r) %></a>
+              <span class="text-sm text-gray-500 dark:text-gray-400"><%= fmtDate(r.StartDate) %> to <%= fmtDate(r.EndDate) %> · paid <%= fmtDate(r.PaymentDate) %></span>
+              <span class="text-sm tabular-nums text-gray-900 dark:text-gray-100"><%= fmtMoney(r.totals.Gross) %> gross</span>
+            </li>
+          <% }) %>
+        </ul>
+      </section>
+    <% } %>
+  <% } %>
+</div>

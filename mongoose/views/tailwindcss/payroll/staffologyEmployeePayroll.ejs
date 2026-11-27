@@ -1,0 +1,56 @@
+<%#
+  An employee's payroll page in Staffology mode (staffologyPayrollController.renderEmployeePayroll).
+  The in-house payroll form (NI, tax code, year to date...) is hidden: Staffology holds
+  those. Only the Payroll ID, the link to Staffology, is edited here.
+  Locals: employee, record (Staffology employee or null), years, payrollName, fmtMoney, fmtDate, taxYearLabel.
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="/payroll/dashboard" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Payroll</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Payroll — <a href="/employee/read/<%= employee.uuid %>" class="hover:underline"><%= employee.name %></a></h1>
+  </div>
+  <p class="text-sm text-gray-700 dark:text-gray-300">Payroll is run in Staffology. Tax code, NI, pension and year-to-date figures are kept there; this page shows what was paid.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Link to Staffology</h2>
+      <form method="POST" action="/payroll/employee/<%= employee.uuid %>" class="space-y-3">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div>
+          <label for="payrollId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payroll ID (Staffology payroll code)</label>
+          <input id="payrollId" name="payrollId" type="text" maxlength="35" value="<%= employee.payroll?.payrollId || '' %>"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-mono">
+        </div>
+        <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+      </form>
+    </section>
+
+    <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">In Staffology</h2>
+      <% if (!employee.payroll?.payrollId) { %>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Not linked. Enter this person's Staffology payroll code, or link them on <a href="/payroll/staffology/employees" class="text-green-700 dark:text-green-400 hover:underline">Staffology employees</a>.</p>
+      <% } else if (!record) { %>
+        <p class="text-sm text-gray-500 dark:text-gray-400">No Staffology employee has payroll code <span class="font-mono"><%= employee.payroll.payrollId %></span>.</p>
+      <% } else { %>
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <dt class="text-gray-500 dark:text-gray-400">Name</dt><dd class="text-gray-900 dark:text-gray-100"><%= payrollName(record) %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Status</dt><dd class="text-gray-900 dark:text-gray-100"><%= record.Status || '—' %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Job title</dt><dd class="text-gray-900 dark:text-gray-100"><%= record.JobTitle || '—' %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Paid</dt><dd class="text-gray-900 dark:text-gray-100"><%= [record.PayPeriod, record.PayBasis].filter(Boolean).join(' · ') || '—' %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Hourly rate</dt><dd class="text-gray-900 dark:text-gray-100 tabular-nums"><%= record.BaseHourlyRate != null ? fmtMoney(record.BaseHourlyRate) : '—' %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Daily rate</dt><dd class="text-gray-900 dark:text-gray-100 tabular-nums"><%= record.BaseDailyRate != null ? fmtMoney(record.BaseDailyRate) : '—' %></dd>
+          <dt class="text-gray-500 dark:text-gray-400">Started</dt><dd class="text-gray-900 dark:text-gray-100"><%= fmtDate(record.StartDate) %></dd>
+          <% if (record.LeaveDate) { %><dt class="text-gray-500 dark:text-gray-400">Left</dt><dd class="text-gray-900 dark:text-gray-100"><%= fmtDate(record.LeaveDate) %></dd><% } %>
+        </dl>
+      <% } %>
+    </section>
+  </div>
+
+  <% if (years.length) { %>
+    <%- include('./_staffologyPayYears', { years, payslipHref: (e) => `/payroll/staffology/payslip/${encodeURIComponent(e.uuid)}`, fmtMoney, fmtDate, taxYearLabel }) %>
+  <% } else if (employee.payroll?.payrollId) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No Staffology pay entries for this person yet.</div>
+  <% } %>
+</div>

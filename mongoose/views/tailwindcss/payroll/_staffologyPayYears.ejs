@@ -1,0 +1,53 @@
+<%#
+  Pay entries grouped by tax year, with year-to-date totals and a payslip link per
+  entry. Shared by the employee payroll page (Staffology mode) and My pay.
+  Locals: years [{ taxYear, entries, totals }], payslipHref(entry), fmtMoney, fmtDate, taxYearLabel.
+%>
+<% const th = 'px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'; %>
+<div class="space-y-6">
+  <% years.forEach((y) => { %>
+    <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 pt-5 pb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-200"><%= taxYearLabel(y.taxYear) %></h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Year to date: <span class="font-medium text-gray-900 dark:text-gray-100 tabular-nums"><%= fmtMoney(y.totals.Gross) %></span> gross ·
+          <span class="font-medium text-gray-900 dark:text-gray-100 tabular-nums"><%= fmtMoney(y.totals.TakeHomePay || y.totals.NetPay) %></span> take-home
+        </p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %> text-left">Paid on</th>
+              <th class="<%= th %> text-left">Period</th>
+              <th class="<%= th %> text-right">Gross</th>
+              <th class="<%= th %> text-right">Tax</th>
+              <th class="<%= th %> text-right">NI</th>
+              <th class="<%= th %> text-right">Pension</th>
+              <th class="<%= th %> text-right">Take-home</th>
+              <th class="<%= th %> text-right"><span class="sr-only">Payslip</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% y.entries.forEach((e) => { const t = e.Totals || {}; %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-3 py-2 text-gray-900 dark:text-white"><%= fmtDate(e.PaymentDate) %></td>
+                <td class="px-3 py-2 text-gray-700 dark:text-gray-300"><%= e.PayPeriod %> <%= e.Period %> · <%= fmtDate(e.StartDate) %> to <%= fmtDate(e.EndDate) %></td>
+                <td class="px-3 py-2 text-right tabular-nums"><%= fmtMoney(t.Gross) %></td>
+                <td class="px-3 py-2 text-right tabular-nums"><%= fmtMoney(t.Tax) %></td>
+                <td class="px-3 py-2 text-right tabular-nums"><%= fmtMoney(t.EmployeeNi) %></td>
+                <td class="px-3 py-2 text-right tabular-nums"><%= fmtMoney(t.EmployeePension) %></td>
+                <td class="px-3 py-2 text-right tabular-nums font-medium"><%= fmtMoney(t.TakeHomePay ?? t.NetPay) %></td>
+                <td class="px-3 py-2 text-right">
+                  <% if (e.uuid) { %>
+                    <a href="<%= payslipHref(e) %>" target="_blank" rel="noopener" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Payslip</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  <% }) %>
+</div>

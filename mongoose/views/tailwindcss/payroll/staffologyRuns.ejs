@@ -1,0 +1,74 @@
+<%#
+  Pay runs in Staffology mode (staffologyPayrollController.renderRuns).
+  Locals: years, taxYear, runs[{ TaxYear, PayPeriod, Period, Ordinal, StartDate, EndDate,
+          PaymentDate, people, closed, totals }], fmtMoney, fmtDate, taxYearLabel, periodKey.
+%>
+<% const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'; %>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="/payroll/dashboard" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Payroll</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Pay runs</h1>
+  </div>
+  <p class="text-sm text-gray-700 dark:text-gray-300">Every pay run from Staffology. Open one to compare each person's pay with their approved attendance.</p>
+
+  <% if (!years.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No Staffology pay runs have been synced yet.
+    </div>
+  <% } else { %>
+    <form method="GET" action="/payroll/runs" class="flex gap-2 flex-wrap items-center">
+      <label for="f-year" class="text-sm font-medium text-gray-500 dark:text-gray-400">Tax year</label>
+      <select id="f-year" name="year" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+        <% years.forEach((y) => { %><option value="<%= y %>" <%= y === taxYear ? 'selected' : '' %>><%= taxYearLabel(y) %></option><% }) %>
+      </select>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Show</button>
+    </form>
+
+    <% if (!runs.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No pay runs in <%= taxYearLabel(taxYear) %>.</div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %> text-left">Pay run</th>
+              <th class="<%= th %> text-left">Period</th>
+              <th class="<%= th %> text-left">Paid on</th>
+              <th class="<%= th %> text-right">People</th>
+              <th class="<%= th %> text-right">Gross</th>
+              <th class="<%= th %> text-right">Tax</th>
+              <th class="<%= th %> text-right">NI (ee / er)</th>
+              <th class="<%= th %> text-right">Net</th>
+              <th class="<%= th %> text-right">Total cost</th>
+              <th class="<%= th %> text-left">State</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% runs.forEach((r) => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/payroll/staffology?period=<%= encodeURIComponent(periodKey(r)) %>" class="font-medium text-green-700 dark:text-green-400 hover:underline"><%= r.PayPeriod %> <%= r.Period %><%= r.Ordinal > 1 ? ` (run ${r.Ordinal})` : '' %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= fmtDate(r.StartDate) %> to <%= fmtDate(r.EndDate) %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= fmtDate(r.PaymentDate) %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= r.people %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(r.totals.Gross) %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(r.totals.Tax) %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(r.totals.EmployeeNi) %> / <%= fmtMoney(r.totals.EmployerNi) %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(r.totals.NetPay) %></td>
+                <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(r.totals.TotalCost) %></td>
+                <td class="px-4 py-3">
+                  <% if (r.closed) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full border bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">Closed</span>
+                  <% } else { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full border bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">Open</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  <% } %>
+</div>
