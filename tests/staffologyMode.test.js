@@ -185,6 +185,38 @@ describe('Staffology pay summaries', () => {
     assert.deepEqual(months.map((m) => [m.taxMonth, m.runs]), [[1, 2], [2, 1], [12, 1]]);
   });
 
+  it('groups by tax week from 6 April, and by fortnight and four weeks', () => {
+    const list = [
+      e('A', '2026-04-06T12:00:00Z', 10),
+      e('B', '2026-04-12T12:00:00Z', 10, { Period: 1 }),
+      e('A', '2026-04-13T12:00:00Z', 10, { Period: 2 }),
+      e('A', '2026-04-27T12:00:00Z', 10, { Period: 4 }),
+      e('A', '2027-04-05T12:00:00Z', 10, { Period: 53 }),
+      e('A', '2026-04-05T12:00:00Z', 10, { Period: 99 }), // previous tax year
+    ];
+    const weeks = provider.groupByPayPeriod(list, 2026, 'Weekly');
+    assert.deepEqual(weeks.map((w) => [w.period, w.people]), [[1, 2], [2, 1], [4, 1], [53, 1]]);
+    assert.equal(weeks[0].label, 'Week 1');
+    assert.equal(weeks[1].start.toISOString().slice(0, 10), '2026-04-13');
+    assert.deepEqual(provider.groupByPayPeriod(list, 2026, 'Fortnightly').map((w) => w.period), [1, 2, 27]);
+    assert.deepEqual(provider.groupByPayPeriod(list, 2026, 'FourWeekly').map((w) => w.period), [1, 14]);
+    assert.equal(provider.groupByPayPeriod(list, 2026, 'Monthly')[0].label, 'M1 · Apr');
+  });
+
+  it('pay frequency comes from config and defaults to weekly', () => {
+    const before = process.env.PAYROLL_PAY_FREQUENCY;
+    try {
+      delete process.env.PAYROLL_PAY_FREQUENCY;
+      assert.equal(provider.payFrequency(), 'Weekly');
+      process.env.PAYROLL_PAY_FREQUENCY = 'Monthly';
+      assert.equal(provider.payFrequency(), 'Monthly');
+      process.env.PAYROLL_PAY_FREQUENCY = 'Hourly';
+      assert.equal(provider.payFrequency(), 'Weekly');
+    } finally {
+      if (before === undefined) delete process.env.PAYROLL_PAY_FREQUENCY; else process.env.PAYROLL_PAY_FREQUENCY = before;
+    }
+  });
+
   it('groups entries by tax year, newest first', () => {
     const years = provider.groupByTaxYear([e('A', '2026-04-10', 10), e('A', '2025-12-01', 5, { TaxYear: 2025 })]);
     assert.deepEqual(years.map((y) => y.taxYear), [2026, 2025]);

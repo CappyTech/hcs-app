@@ -1,12 +1,11 @@
 <%#
   Payroll dashboard in Staffology mode (staffologyPayrollController.renderDashboard).
   Locals: years, taxYear, summary { totals, runs, latest { ...run, comparison }, unlinked },
-          monthly { months, totals }, FLAGS, fmtMoney, fmtDate, taxYearLabel, periodKey.
+          breakdown { periods, unit, heading, frequency, totals }, FLAGS, fmtMoney, fmtDate, taxYearLabel, periodKey.
 %>
 <%
   const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4';
-  const monthName = (m) => ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'][(m - 1) % 12];
   const runLabel = (r) => `${r.PayPeriod} ${r.Period}${r.Ordinal > 1 ? ` (run ${r.Ordinal})` : ''}`;
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
@@ -70,14 +69,14 @@
       </section>
     <% } %>
 
-    <% if (monthly && monthly.months.length) { %>
+    <% if (breakdown && breakdown.periods.length) { %>
       <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
-        <h2 class="px-5 pt-5 pb-3 text-base font-semibold text-gray-800 dark:text-gray-200">By tax month</h2>
+        <h2 class="px-5 pt-5 pb-3 text-base font-semibold text-gray-800 dark:text-gray-200"><%= breakdown.heading %> <span class="text-xs font-normal text-gray-500 dark:text-gray-400">by payment date</span></h2>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th class="<%= th %> text-left">Month</th>
+                <th class="<%= th %> text-left"><%= breakdown.unit %></th>
                 <th class="<%= th %> text-right">Runs</th>
                 <th class="<%= th %> text-right">People</th>
                 <th class="<%= th %> text-right">Gross</th>
@@ -88,9 +87,9 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <% monthly.months.forEach((m) => { %>
+              <% breakdown.periods.forEach((m) => { %>
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">M<%= m.taxMonth %> · <%= monthName(m.taxMonth) %></td>
+                  <td class="px-4 py-3 text-gray-900 dark:text-white"><%= m.label %><% if (breakdown.frequency !== 'Monthly') { %><span class="block text-xs text-gray-500 dark:text-gray-400">from <%= fmtDate(m.start) %></span><% } %></td>
                   <td class="px-4 py-3 text-right tabular-nums"><%= m.runs %></td>
                   <td class="px-4 py-3 text-right tabular-nums"><%= m.people %></td>
                   <td class="px-4 py-3 text-right tabular-nums"><%= fmtMoney(m.totals.Gross) %></td>

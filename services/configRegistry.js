@@ -233,6 +233,16 @@ export const GROUPS = [
     keys: [
       { key: 'STAFFOLOGY_API_KEY', label: 'API key', type: 'secret', help: 'Create one in Staffology: profile picture → API Keys. It has the permissions of the Staffology user who created it; read access to the employer is enough. Unset turns the Staffology sync off.' },
       { key: 'STAFFOLOGY_EMPLOYER_ID', label: 'Employer ID', type: 'text', help: 'Only needed if the key can see more than one employer. The test button says which.' },
+      {
+        key: 'PAYROLL_PAY_FREQUENCY', label: 'Pay frequency', type: 'select',
+        options: [
+          { value: 'Weekly', label: 'Weekly' },
+          { value: 'Fortnightly', label: 'Fortnightly' },
+          { value: 'FourWeekly', label: 'Four-weekly' },
+          { value: 'Monthly', label: 'Monthly' },
+        ],
+        help: 'How often people are paid. The payroll dashboard breaks pay down by this period, and the pay pages open on the latest run of it. Unset means Weekly.',
+      },
     ],
   },
   {

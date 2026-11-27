@@ -35,12 +35,12 @@ export const renderDashboard = async (req, res, next) => {
   try {
     const years = await provider.listTaxYears();
     const taxYear = pickYear(req, years);
-    const [summary, monthly] = years.length
-      ? await Promise.all([provider.dashboardSummary(taxYear), provider.monthlySummary(taxYear)])
+    const [summary, breakdown] = years.length
+      ? await Promise.all([provider.dashboardSummary(taxYear), provider.paySummary(taxYear)])
       : [null, null];
     res.render(view('payroll', 'staffologyDashboard'), {
       title: 'Payroll',
-      years, taxYear, summary, monthly, FLAGS: provider.FLAGS, ...helpers,
+      years, taxYear, summary, breakdown, FLAGS: provider.FLAGS, ...helpers,
     });
   } catch (err) { next(err); }
 };
