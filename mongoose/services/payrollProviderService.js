@@ -329,7 +329,7 @@ export async function loadComparison(period) {
   const [employees, attendance, payrollEmployees] = await Promise.all([
     Employee.find({}).select('name uuid status hourlyRate payroll.payrollId').lean(),
     Attendance.find({ employeeId: { $ne: null }, date: { $gte: lo, $lt: hi } })
-      .select('employeeId date type status hoursWorked dayRate updatedAt').lean(),
+      .select('employeeId date type status hoursWorked dayRate savedRate updatedAt').lean(),
     PayrollEmployee ? PayrollEmployee.find({}).select('PayrollCode PayPeriod').lean() : [],
   ]);
   return comparePeriod({ entries, employees, attendance, payrollEmployees });

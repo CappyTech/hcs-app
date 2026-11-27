@@ -6,6 +6,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import provider from '../services/payrollProviderService.js';
 import staffologyRates from '../services/staffologyRateSyncService.js';
+import attendanceRates from '../services/attendanceRateService.js';
 import { isStaffologyMode } from '../../services/staffologyModeService.js';
 
 const view = (name) => path.join('tailwindcss', 'payroll', name);
@@ -76,7 +77,10 @@ export async function takeRates(employeeUuid) {
 export const syncRates = async (req, res, next) => {
   try {
     const summary = await staffologyRates.syncRates();
-    req.flash?.(summary.reason || summary.failed ? 'error' : 'success', staffologyRates.describeSummary(summary));
+    // Then the rates closed pay runs actually used, onto the days they paid
+    const payRun = summary.reason ? null : await attendanceRates.correctFromPayRuns();
+    const message = staffologyRates.describeSummary(summary) + (payRun ? ` ${attendanceRates.describePayRun(payRun)}` : '');
+    req.flash?.(summary.reason || summary.failed ? 'error' : 'success', message);
     res.redirect('/payroll/staffology/employees');
   } catch (err) {
     next(err);

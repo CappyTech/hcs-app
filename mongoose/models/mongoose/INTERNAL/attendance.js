@@ -47,6 +47,24 @@ const attendanceSchema = new mongoose.Schema({
     hoursWorked: { type: mongoose.Decimal128, min: 0 },
     dayRate: { type: mongoose.Decimal128, min: 0 },
 
+    // The hourly rate this day is costed at, saved so later rate changes
+    // don't alter past days (attendanceRateService). Not the same as dayRate,
+    // which means "pay this day a flat amount" and replaces hoursWorked: an
+    // hourly day costs hoursWorked × savedRate.hourly when it has one, else
+    // the employee's current hourlyRate. Employee days only.
+    //   source: 'staffology-payrun' — the base rate on the closed Staffology
+    //           pay run covering the day (what was really paid; never replaced
+    //           by approval);
+    //           'staffology' / 'hcs-app' — the employee's rate when the day
+    //           was approved (from Staffology, or typed into hcs-app).
+    //   estimated: true when filled in afterwards from the current rate.
+    savedRate: {
+        hourly: { type: mongoose.Decimal128, min: 0 },
+        source: { type: String, enum: ['staffology-payrun', 'staffology', 'hcs-app'] },
+        at: { type: Date },
+        estimated: { type: Boolean }
+    },
+
     // ── Notes ────────────────────────────────────────────────────────────
     notes: { type: String, trim: true, maxlength: 2000 }
 }, {

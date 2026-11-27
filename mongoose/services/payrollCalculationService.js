@@ -454,14 +454,33 @@ async function getGrossPayFromAttendance(employeeId, periodStart, periodEnd, emp
     date: { $gte: periodStart, $lte: periodEnd },
     status: 'approved',
     type: { $in: ['work', 'training'] }
-  }).select('hoursWorked dayRate').lean();
+  }).select('hoursWorked dayRate savedRate').lean();
 
   return grossPayFromRecords(records, employee);
 }
 
 /**
+ * The hourly rate saved on an attendance day (attendanceRateService), or
+ * null when it has none (then the employee's current hourlyRate applies).
+ */
+function savedHourlyRate(rec) {
+  const n = toNum(rec?.savedRate?.hourly);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Is this day costed at an estimated rate? An hourly day (hours, no day rate)
+ * whose saved rate was filled in afterwards, or that has no saved rate yet.
+ */
+function hasEstimatedRate(rec) {
+  if (toNum(rec?.dayRate) > 0 || !(toNum(rec?.hoursWorked) > 0)) return false;
+  return savedHourlyRate(rec) == null || rec?.savedRate?.estimated === true;
+}
+
+/**
  * Pure part of getGrossPayFromAttendance: each record pays its dayRate when
- * set, otherwise hoursWorked × the employee's hourlyRate.
+ * set, otherwise hoursWorked × its saved hourly rate, or × the employee's
+ * current hourlyRate when it has none.
  *
  * @param {object[]} records — lean attendance records
  * @param {object} employee
@@ -472,7 +491,7 @@ function grossPayFromRecords(records, employee) {
   let total = 0;
   for (const rec of records) {
     const dayRate = toNum(rec.dayRate);
-    total += dayRate > 0 ? dayRate : toNum(rec.hoursWorked) * hourlyRate;
+    total += dayRate > 0 ? dayRate : toNum(rec.hoursWorked) * (savedHourlyRate(rec) ?? hourlyRate);
   }
   return roundHalfUp(total);
 }
@@ -742,6 +761,8 @@ export default {
   processPayrollRun,
   getGrossPayFromAttendance,
   grossPayFromRecords,
+  savedHourlyRate,
+  hasEstimatedRate,
   // Exported for testing helpers
   parseTaxCode,
   annualToPeriod,
@@ -749,4 +770,4 @@ export default {
   toNum
 };
 
-export { calculatePAYETax, calculateEmployeeNI, calculateEmployerNI, calculatePensionContributions, calculateStudentLoan, computeEntryForEmployee, processPayrollRun, getGrossPayFromAttendance, grossPayFromRecords, parseTaxCode, annualToPeriod, periodsInYear, toNum };
+export { calculatePAYETax, calculateEmployeeNI, calculateEmployerNI, calculatePensionContributions, calculateStudentLoan, computeEntryForEmployee, processPayrollRun, getGrossPayFromAttendance, grossPayFromRecords, savedHourlyRate, hasEstimatedRate, parseTaxCode, annualToPeriod, periodsInYear, toNum };

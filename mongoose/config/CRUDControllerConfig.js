@@ -13,6 +13,7 @@ import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
 import staffologyRates from '../services/staffologyRateSyncService.js';
+import attendanceRates from '../services/attendanceRateService.js';
 
 // Vehicles have no name/title field, so reference dropdowns fell back to the
 // raw ObjectId. Label them by registration, then make and model.
@@ -43,6 +44,9 @@ const ATTENDANCE_APPROVAL_FIELDS = [
   'siteApprovedBy', 'siteApprovedAt', 'approvedBy', 'approvedAt',
   'rejectedBy', 'rejectedAt', 'rejectionReason',
 ];
+
+// The hourly rate saved on a day (attendance.savedRate): never from a form.
+const ATTENDANCE_RATE_FIELDS = ['savedRate.hourly', 'savedRate.source', 'savedRate.at', 'savedRate.estimated'];
 
 const forbidden = (message) => Object.assign(new Error(message), { statusCode: 403, name: 'ForbiddenError' });
 
@@ -98,8 +102,10 @@ export default {
   },
   attendance: {
     title: 'Attendance',
-    // jobRegisterId is set by the weekly sheet (and its import), never typed in
-    readOnly: ['uuid', 'createdAt', 'jobRegisterId', ...ATTENDANCE_APPROVAL_FIELDS],
+    // jobRegisterId is set by the weekly sheet (and its import), never typed in.
+    // The saved rate is set only by attendanceRateService, so an admin
+    // correcting a day (even in a closed week) keeps the rate it was paid at.
+    readOnly: ['uuid', 'createdAt', 'jobRegisterId', ...ATTENDANCE_APPROVAL_FIELDS, ...ATTENDANCE_RATE_FIELDS],
     hideFields: ['_id', '__v'],
     // Non-admins: own record only, pending; and no records inside a
     // locked/submitted payroll run. Site Ops edit (a job role) records for
@@ -146,6 +152,14 @@ export default {
       status: value => ['planned', 'pending', 'site-approved', 'approved', 'rejected'].includes(value),
       hoursWorked: value => typeof value === 'number' && value >= 0,
       dayRate: value => typeof value === 'number' && value >= 0,
+    },
+    // An admin can create a day already approved, or set a day's status to
+    // approved here: save its rate as the approval routes do.
+    afterCreate: async (doc) => {
+      if (doc?.status === 'approved') await attendanceRates.stampApproved([doc]);
+    },
+    afterUpdate: async (doc, req, { previous } = {}) => {
+      if (doc?.status === 'approved' && previous?.status !== 'approved') await attendanceRates.stampApproved([doc]);
     },
     useSave: true, // findOne+save so pre-validate drops a subcontractor's hours/day rate on update
     middleware: {

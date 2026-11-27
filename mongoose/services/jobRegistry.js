@@ -33,6 +33,7 @@ import __mdbForJobs from './mongooseDatabaseService.js';
 import __documentEntryService from './paperless/documentEntryService.js';
 import __cisCheckService from './paperless/cisCheckService.js';
 import __staffologyRateSyncService from './staffologyRateSyncService.js';
+import __attendanceRateService from './attendanceRateService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -274,11 +275,27 @@ function registerAll() {
   scheduler.register('staffology-rate-sync', {
     description:
       "Staffology mode only: copy each linked employee's pay rate from Staffology onto their hcs-app "
-      + 'record (hourly, or daily for people paid by the day), so Job Register labour and pay checks use '
-      + 'the payroll rate. Changes only rates that differ; never writes a 0 over a rate; never writes to Staffology.',
+      + 'record (the hourly rate, or the day rate when Staffology has no hourly rate), so Job Register labour '
+      + 'and pay checks use the payroll rate; then save the base hourly rate of each closed Staffology pay run '
+      + "on that person's attendance days in the pay period. Changes only what differs; never writes a 0 over "
+      + 'a rate; never writes to Staffology.',
     intervalMs: HOUR,
     initialDelayMs: 2 * MINUTE,
-    run: () => __staffologyRateSyncService.syncRates(),
+    run: async () => {
+      const rates = await __staffologyRateSyncService.syncRates();
+      const { conflictIds, ...payRun } = await __attendanceRateService.correctFromPayRuns();
+      return { rates, payRun };
+    },
+  });
+
+  scheduler.register('attendance-rate-backfill', {
+    description:
+      'Give past employee attendance days their saved hourly rate. Days in a closed Staffology pay run get the '
+      + "rate that pay run used; every other approved day without one gets the employee's current rate, marked "
+      + 'as estimated. Days where two pay runs disagree are left alone and counted as conflicts. Safe to run '
+      + 'again. Manual only.',
+    intervalMs: null,
+    run: () => __attendanceRateService.backfill(),
   });
 
   scheduler.register('vehicle-compliance', {

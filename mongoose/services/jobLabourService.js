@@ -10,7 +10,10 @@
 //
 // Employees: an approved day costs what payroll pays for it (the same rule as
 // payrollCalculationService.grossPayFromRecords): its dayRate when set, else
-// hoursWorked × the employee's hourlyRate. Days not approved yet (planned,
+// hoursWorked × the hourly rate saved on the day (attendanceRateService), or
+// × the employee's current hourlyRate when the day has none. Days costed at
+// an estimated rate (filled in afterwards, or none saved) are counted as
+// estimatedRateDays; their cost still counts. Days not approved yet (planned,
 // pending, site-approved) are costed the same way but kept apart, as an
 // estimate. A day with neither a day rate nor hours (or hours and no hourly
 // rate) costs nothing and is counted as uncosted.
@@ -32,7 +35,7 @@
 // same shape, so the job page and the register share one costing.
 import mongoose from 'mongoose';
 import mdb from './mongooseDatabaseService.js';
-import { grossPayFromRecords, toNum } from './payrollCalculationService.js';
+import { grossPayFromRecords, toNum, savedHourlyRate, hasEstimatedRate } from './payrollCalculationService.js';
 import jobCost, { roundPence } from './jobCostService.js';
 
 export const LABOUR_TYPES = ['work', 'training'];
@@ -56,12 +59,16 @@ export function attendanceMatch({ jobIds = [], contractIds = [], projectIds = []
 
 /**
  * One row per job link × person × approved-or-not, with the sums the costing
- * needs: days, hours, the day rates of days paid by day rate, and the hours
- * of days paid by the hour.
+ * needs: days, hours, the day rates of days paid by day rate, the cost of
+ * hourly days at their saved rate (savedRateCost), the hours of hourly days
+ * with no saved rate (hourlyHours, costed at the employee's current rate),
+ * and how many hourly days are at an estimated rate.
  */
 export function groupsPipeline(match) {
   const num = (path) => ({ $convert: { input: path, to: 'double', onError: 0, onNull: 0 } });
   const byDay = { $gt: [num('$dayRate'), 0] };
+  const saved = { $gt: [num('$savedRate.hourly'), 0] };
+  const hasHours = { $gt: [num('$hoursWorked'), 0] };
   return [
     { $match: match },
     { $group: {
@@ -73,7 +80,9 @@ export function groupsPipeline(match) {
       days: { $sum: 1 },
       hours: { $sum: num('$hoursWorked') },
       dayRateTotal: { $sum: { $cond: [byDay, num('$dayRate'), 0] } },
-      hourlyHours: { $sum: { $cond: [byDay, 0, num('$hoursWorked')] } },
+      savedRateCost: { $sum: { $cond: [{ $or: [byDay, { $not: [saved] }] }, 0, { $multiply: [num('$hoursWorked'), num('$savedRate.hourly')] }] } },
+      hourlyHours: { $sum: { $cond: [{ $or: [byDay, saved] }, 0, num('$hoursWorked')] } },
+      estimatedRateDays: { $sum: { $cond: [{ $and: [{ $not: [byDay] }, hasHours, { $or: [{ $not: [saved] }, { $eq: ['$savedRate.estimated', true] }] }] }, 1, 0] } },
       uncostedDays: { $sum: { $cond: [{ $or: [byDay, { $gt: [num('$hoursWorked'), 0] }] }, 0, 1] } },
       first: { $min: '$date' },
       last: { $max: '$date' },
@@ -93,13 +102,16 @@ export function groupRecords(records = []) {
       employee: r.employeeId ?? null, subcontractor: r.subcontractorId ?? null, approved: r.status === 'approved',
     };
     const key = [_id.job, _id.contract, _id.project, _id.employee, _id.subcontractor, _id.approved].map(String).join('|');
-    const g = out.get(key) || { _id, days: 0, hours: 0, dayRateTotal: 0, hourlyHours: 0, uncostedDays: 0, first: null, last: null };
+    const g = out.get(key) || { _id, days: 0, hours: 0, dayRateTotal: 0, savedRateCost: 0, hourlyHours: 0, estimatedRateDays: 0, uncostedDays: 0, first: null, last: null };
     const dayRate = toNum(r.dayRate);
     const hours = toNum(r.hoursWorked);
+    const saved = savedHourlyRate(r);
     g.days += 1;
     g.hours += hours;
     if (dayRate > 0) g.dayRateTotal += dayRate;
+    else if (saved != null) g.savedRateCost += hours * saved;
     else g.hourlyHours += hours;
+    if (hasEstimatedRate(r)) g.estimatedRateDays += 1;
     if (!(dayRate > 0) && !(hours > 0)) g.uncostedDays += 1;
     const t = r.date ? new Date(r.date) : null;
     if (t && (!g.first || t < g.first)) g.first = t;
@@ -110,13 +122,14 @@ export function groupRecords(records = []) {
 }
 
 /**
- * What a group of an employee's days costs by the payroll rule: the day rates
- * plus the hours paid by the hour × the employee's hourlyRate. Same as
- * grossPayFromRecords() on the group's records.
+ * What a group of an employee's days costs by the payroll rule: the day
+ * rates, plus hourly days at their saved rate, plus hourly days with no saved
+ * rate × the employee's current hourlyRate. Same as grossPayFromRecords() on
+ * the group's records (up to rounding).
  */
 export function groupCost(group, employee) {
   const rate = toNum(employee?.hourlyRate);
-  return roundPence(toNum(group?.dayRateTotal) + toNum(group?.hourlyHours) * rate);
+  return roundPence(toNum(group?.dayRateTotal) + toNum(group?.savedRateCost) + toNum(group?.hourlyHours) * rate);
 }
 
 /** Re-export of the payroll rule, so callers and tests use one definition. */
@@ -161,7 +174,7 @@ export function jobIndex(jobs = [], projectIdByNumber = new Map()) {
   return { jobIds, jobByContract, jobByProject };
 }
 
-const emptyEmployeeTotals = () => ({ days: 0, hours: 0, cost: 0, uncostedDays: 0, pendingDays: 0, pendingHours: 0, pendingCost: 0 });
+const emptyEmployeeTotals = () => ({ days: 0, hours: 0, cost: 0, uncostedDays: 0, estimatedRateDays: 0, pendingDays: 0, pendingHours: 0, pendingCost: 0 });
 
 /**
  * One job's labour table from its groups.
@@ -196,6 +209,7 @@ export function labourForJob(groups = [], { employeesById = new Map(), suppliers
       p.hours += g.hours || 0;
       p.cost = roundPence(p.cost + cost);
       if (empId) p.uncostedDays += g.uncostedDays || 0;
+      if (empId) p.estimatedRateDays += g.estimatedRateDays || 0;
     } else {
       p.pendingDays += g.days || 0;
       p.pendingHours += g.hours || 0;
@@ -232,6 +246,7 @@ export function labourForJob(groups = [], { employeesById = new Map(), suppliers
     people: list,
     employees: {
       days: sum(emps, 'days'), hours: round2(sum(emps, 'hours')), cost: roundPence(sum(emps, 'cost')), uncostedDays: sum(emps, 'uncostedDays'),
+      estimatedRateDays: sum(emps, 'estimatedRateDays'),
       pendingDays: sum(emps, 'pendingDays'), pendingHours: round2(sum(emps, 'pendingHours')), pendingCost: roundPence(sum(emps, 'pendingCost')),
       noHourlyRate: emps.some((p) => p.noHourlyRate),
     },
@@ -262,6 +277,7 @@ export function employeeLabourByJob(groups = [], index, employeesById = new Map(
       t.hours = round2(t.hours + (g.hours || 0));
       t.cost = roundPence(t.cost + cost);
       t.uncostedDays += g.uncostedDays || 0;
+      t.estimatedRateDays += g.estimatedRateDays || 0;
     } else {
       t.pendingDays += g.days || 0;
       t.pendingHours = round2(t.pendingHours + (g.hours || 0));

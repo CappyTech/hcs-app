@@ -363,7 +363,9 @@ const groupAttendanceByPerson = (
     const name = employee.name;
     const dateKey = format(toDateAny(record.date), 'yyyy-MM-dd');
     const hoursWorked = parseFloat(record.hoursWorked || 0);
-    const hourlyRate = parseFloat(employee.hourlyRate || 0);
+    // The rate saved on the day when it has one (attendanceRateService), else the current rate
+    const savedHourly = parseFloat(record.savedRate?.hourly ?? 0);
+    const hourlyRate = savedHourly > 0 ? savedHourly : parseFloat(employee.hourlyRate || 0);
     const calculatedPay = hoursWorked * hourlyRate;
 
     if (!groupedAttendance[name]) {

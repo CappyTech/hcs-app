@@ -1169,6 +1169,7 @@ const helpContent = [
         notes: [
           'hcs-sync copies Staffology into hcs-app after each sync. Use Sync Staffology now on the sync dashboard for an immediate update.',
           'A linked employee’s rates show as “From Staffology” and can’t be edited in hcs-app. Change the rate in Staffology instead. If Staffology has no rate for someone, their hcs-app rate is left as it is and stays editable.',
+          'Each attendance day keeps its own hourly rate. It is saved when the day is approved, then replaced by the rate Staffology actually paid once that pay run is closed. A later rate change doesn’t alter past days. Days with no saved rate use the employee’s current rate, and the job page counts them as estimated.',
           'Once Staffology closes a pay run, attendance in that pay period is locked. Only an admin can still change it.',
           'Staffology mode is on while the Staffology API key is saved and its connection test (Settings → Connections → Staffology) last passed. Changing the key or employer turns it off until the test passes again.',
         ],
