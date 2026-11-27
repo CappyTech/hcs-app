@@ -15,6 +15,7 @@
 // without a database; the load* functions do the reads.
 import { formatInTimeZone } from 'date-fns-tz';
 import mdb from './mongooseDatabaseService.js';
+import configService from '../../services/configService.js';
 import { grossPayFromRecords, toNum } from './payrollCalculationService.js';
 
 const TZ = 'Europe/London';
@@ -399,33 +400,78 @@ export async function listTaxYears() {
 }
 
 /**
- * Pay grouped by tax month (1 = April) from the payment date, for one tax year
- * (pure). Entries without a payment date fall back to their end date.
+ * How often the company pays people (Settings → Connections → Staffology,
+ * PAYROLL_PAY_FREQUENCY). Values are Staffology's PayPeriod names. Drives the
+ * payroll dashboard breakdown and which pay runs the pages pick by default.
  */
-export function groupByTaxMonth(entries = [], taxYear) {
-  const months = new Map();
+export const PAY_FREQUENCIES = {
+  Weekly: { weeks: 1, unit: 'Week', heading: 'By tax week' },
+  Fortnightly: { weeks: 2, unit: 'Fortnight', heading: 'By tax fortnight' },
+  FourWeekly: { weeks: 4, unit: 'Period', heading: 'By four-week period' },
+  Monthly: { unit: 'Month', heading: 'By tax month' },
+};
+export const DEFAULT_PAY_FREQUENCY = 'Weekly';
+
+export function payFrequency() {
+  const v = String(configService.get('PAYROLL_PAY_FREQUENCY', '') || '').trim();
+  return PAY_FREQUENCIES[v] ? v : DEFAULT_PAY_FREQUENCY;
+}
+
+const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+const utcDay = (key) => { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+
+/**
+ * Pay grouped by tax week, fortnight, four-week period or month (from the
+ * payment date, falling back to the end date), for one tax year (pure). Week
+ * 1 starts on 6 April; week 53 is the last day or two of the tax year.
+ */
+export function groupByPayPeriod(entries = [], taxYear, frequency = DEFAULT_PAY_FREQUENCY) {
+  const freq = PAY_FREQUENCIES[frequency] ? frequency : DEFAULT_PAY_FREQUENCY;
+  const { weeks } = PAY_FREQUENCIES[freq];
+  const yearStart = Date.UTC(taxYear, 3, 6);
+  const groups = new Map();
   for (const e of entries) {
     const d = e.PaymentDate || e.EndDate;
     if (!d) continue;
-    const [y, m, day] = dayKey(d).split('-').map(Number);
-    // Tax month n runs from the 6th of month (n + 3) to the 5th of the next.
-    let monthIndex = (y - taxYear) * 12 + (m - 4) - (day < 6 ? 1 : 0);
-    const taxMonth = monthIndex + 1;
-    if (taxMonth < 1 || taxMonth > 12) continue;
-    if (!months.has(taxMonth)) months.set(taxMonth, { taxMonth, entries: [] });
-    months.get(taxMonth).entries.push(e);
+    const key = dayKey(d);
+    let period;
+    if (weeks) {
+      const days = Math.floor((utcDay(key) - yearStart) / 86400000);
+      if (days < 0 || days > 365) continue;
+      period = Math.floor(days / (7 * weeks)) + 1;
+    } else {
+      const [y, m, day] = key.split('-').map(Number);
+      // Tax month n runs from the 6th of month (n + 3) to the 5th of the next.
+      period = (y - taxYear) * 12 + (m - 4) - (day < 6 ? 1 : 0) + 1;
+      if (period < 1 || period > 12) continue;
+    }
+    if (!groups.has(period)) groups.set(period, []);
+    groups.get(period).push(e);
   }
-  return [...months.values()]
-    .sort((a, b) => a.taxMonth - b.taxMonth)
-    .map((m) => ({ taxMonth: m.taxMonth, people: new Set(m.entries.map((e) => e.PayrollCode)).size, runs: new Set(m.entries.map(periodKey)).size, totals: addTotals(m.entries) }));
+  return [...groups.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([period, list]) => ({
+      period,
+      label: weeks ? `${PAY_FREQUENCIES[freq].unit} ${period}` : `M${period} · ${MONTHS[period - 1]}`,
+      start: weeks ? new Date(yearStart + (period - 1) * weeks * 7 * 86400000) : new Date(Date.UTC(taxYear, 3 + period - 1, 6)),
+      people: new Set(list.map((e) => e.PayrollCode)).size,
+      runs: new Set(list.map(periodKey)).size,
+      totals: addTotals(list),
+    }));
 }
 
-/** Monthly summary for the overview panel. */
-export async function monthlySummary(taxYear) {
+/** Pay grouped by tax month (1 = April); kept for callers that want months. */
+export function groupByTaxMonth(entries = [], taxYear) {
+  return groupByPayPeriod(entries, taxYear, 'Monthly').map(({ period, ...rest }) => ({ taxMonth: period, ...rest }));
+}
+
+/** The dashboard breakdown for one tax year, by the company's pay frequency. */
+export async function paySummary(taxYear, frequency = payFrequency()) {
   const { Entry } = models();
-  if (!Entry) return { taxYear, months: [], totals: addTotals([]) };
+  const meta = PAY_FREQUENCIES[frequency] || PAY_FREQUENCIES[DEFAULT_PAY_FREQUENCY];
+  if (!Entry) return { taxYear, frequency, ...meta, periods: [], totals: addTotals([]) };
   const entries = await Entry.find({ TaxYear: Number(taxYear) }).select('PayrollCode TaxYear PayPeriod Period Ordinal PaymentDate EndDate Totals').lean();
-  return { taxYear: Number(taxYear), months: groupByTaxMonth(entries, Number(taxYear)), totals: addTotals(entries) };
+  return { taxYear: Number(taxYear), frequency, ...meta, periods: groupByPayPeriod(entries, Number(taxYear), frequency), totals: addTotals(entries) };
 }
 
 /** Dashboard figures for one tax year. */
@@ -446,7 +492,10 @@ export async function dashboardSummary(taxYear) {
     const codes = employeesByPayrollCode(emps);
     unlinked = pes.filter((pe) => !codes.has(normCode(pe.PayrollCode))).length;
   }
-  const latest = runs[0] ? { ...runs[0], comparison: await loadComparison(runs[0]) } : null;
+  // The latest run on the company's pay frequency (fall back to the latest of any kind).
+  const freq = payFrequency();
+  const main = runs.find((r) => r.PayPeriod === freq) || runs[0];
+  const latest = main ? { ...main, comparison: await loadComparison(main) } : null;
   return { taxYear: Number(taxYear), runs: runs.slice(0, 10), totals: addTotals(entries), latest, unlinked };
 }
 
@@ -532,7 +581,10 @@ export default {
   listRuns,
   listTaxYears,
   groupByTaxMonth,
-  monthlySummary,
+  groupByPayPeriod,
+  paySummary,
+  payFrequency,
+  PAY_FREQUENCIES,
   dashboardSummary,
   entriesForPayrollCode,
   payrollEmployeeByCode,

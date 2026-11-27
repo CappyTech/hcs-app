@@ -24,9 +24,9 @@ export const renderComparison = async (req, res, next) => {
     }
 
     const wanted = provider.parsePeriodKey(req.query.period);
-    // Default: the latest weekly period (fall back to the latest of any kind).
+    // Default: the latest period on the company's pay frequency (fall back to the latest of any kind).
     const selected = (wanted && periods.find((p) => provider.periodKey(p) === provider.periodKey(wanted)))
-      || periods.find((p) => p.PayPeriod === 'Weekly')
+      || periods.find((p) => p.PayPeriod === provider.payFrequency())
       || periods[0];
 
     const comparison = await provider.loadComparison(selected);

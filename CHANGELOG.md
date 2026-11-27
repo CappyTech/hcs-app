@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.160.0] - 2026-11-27
+
+### Added
+- **Pay frequency setting** (`PAYROLL_PAY_FREQUENCY`, Settings → Connections → Staffology): Weekly, Fortnightly, Four-weekly or Monthly. Unset means Weekly.
+
+### Changed
+- The Staffology payroll dashboard breaks pay down by the pay frequency (tax weeks from 6 April by default) instead of always by tax month. It is still grouped by payment date.
+- The dashboard's latest pay run and the pay vs attendance page now open on the latest run of the configured frequency, falling back to the latest of any kind.
+
 ## [6.159.0] - 2026-11-27
 
 ### Added
