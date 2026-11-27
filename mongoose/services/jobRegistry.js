@@ -32,6 +32,7 @@ import __statementReadingService from './paperless/statementReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
 import __documentEntryService from './paperless/documentEntryService.js';
 import __cisCheckService from './paperless/cisCheckService.js';
+import __staffologyRateSyncService from './staffologyRateSyncService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -268,6 +269,16 @@ function registerAll() {
     initialDelayMs: 60_000,
     // The plan lists every name; the job history keeps the counts
     run: () => __supplierCorrespondentSyncService.syncSuppliersToCorrespondents().then(({ plan, ...counts }) => counts),
+  });
+
+  scheduler.register('staffology-rate-sync', {
+    description:
+      "Staffology mode only: copy each linked employee's pay rate from Staffology onto their hcs-app "
+      + 'record (hourly, or daily for people paid by the day), so Job Register labour and pay checks use '
+      + 'the payroll rate. Changes only rates that differ; never writes a 0 over a rate; never writes to Staffology.',
+    intervalMs: HOUR,
+    initialDelayMs: 2 * MINUTE,
+    run: () => __staffologyRateSyncService.syncRates(),
   });
 
   scheduler.register('vehicle-compliance', {

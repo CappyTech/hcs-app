@@ -5,6 +5,8 @@ import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import provider from '../services/payrollProviderService.js';
+import staffologyRates from '../services/staffologyRateSyncService.js';
+import { isStaffologyMode } from '../../services/staffologyModeService.js';
 
 const view = (name) => path.join('tailwindcss', 'payroll', name);
 
@@ -46,9 +48,36 @@ export const renderEmployees = async (req, res, next) => {
     res.render(view('staffologyEmployees'), {
       title: 'Staffology employees',
       matches,
+      staffologyMode: isStaffologyMode(),
       payrollName: provider.payrollName,
       fmtMoney, fmtDate,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * After a link: take the employee's pay rates from Staffology (Staffology
+ * mode only). Returns a sentence for the flash, or '' when nothing changed.
+ * Never fails the link itself.
+ */
+export async function takeRates(employeeUuid) {
+  try {
+    const s = await staffologyRates.syncRates({ employeeUuid });
+    return s.updated ? ' Pay rates updated from Staffology.' : '';
+  } catch (err) {
+    logger.warn(`payrollProvider: rate update after link failed: ${err.message}`);
+    return ' Pay rates could not be updated from Staffology just now.';
+  }
+}
+
+/** Admin button: bring every linked employee's rates in line with Staffology. */
+export const syncRates = async (req, res, next) => {
+  try {
+    const summary = await staffologyRates.syncRates();
+    req.flash?.(summary.reason || summary.failed ? 'error' : 'success', staffologyRates.describeSummary(summary));
+    res.redirect('/payroll/staffology/employees');
   } catch (err) {
     next(err);
   }
@@ -100,11 +129,12 @@ export const linkEmployee = async (req, res, next) => {
     employee.set('payroll.payrollId', code);
     await employee.save();
     logger.info(`payrollProvider: linked employee ${employee.uuid} to payroll code (by ${req.session?.user?.id || 'unknown'})`);
-    req.flash?.('success', `${employee.name} linked to Staffology payroll code ${code}.`);
+    const rates = await takeRates(employee.uuid);
+    req.flash?.('success', `${employee.name} linked to Staffology payroll code ${code}.${rates}`);
     res.redirect(back);
   } catch (err) {
     next(err);
   }
 };
 
-export default { renderComparison, renderEmployees, linkEmployee };
+export default { renderComparison, renderEmployees, linkEmployee, syncRates, takeRates };

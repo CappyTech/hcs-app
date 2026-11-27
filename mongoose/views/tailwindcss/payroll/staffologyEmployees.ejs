@@ -15,6 +15,23 @@
     <strong>Payroll ID</strong> (Payroll settings on the employee). Linking sets that Payroll ID.
   </p>
 
+  <% if (locals.staffologyMode) { %>
+  <div class="flex flex-wrap items-center justify-between gap-3 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-900">
+    <p class="text-sm text-gray-700 dark:text-gray-300">
+      Linked employees take their pay rate from Staffology (hourly, or daily for people paid by the day).
+      It is copied when they are linked and every hour after that, and can't be edited in hcs-app.
+    </p>
+    <% if (isAdmin) { %>
+      <form method="POST" action="/payroll/staffology/employees/sync-rates">
+        <%- include('../partials/csrfHidden') %>
+        <button type="submit" class="text-sm px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">
+          <i class="bi bi-arrow-repeat mr-1" aria-hidden="true"></i>Update rates from Staffology
+        </button>
+      </form>
+    <% } %>
+  </div>
+  <% } %>
+
   <% if (!matches.length) { %>
     <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
       No Staffology data yet — set STAFFOLOGY_API_KEY on hcs-sync.

@@ -41,7 +41,7 @@ const KNOWN_CRUD_KEYS = new Set([
   'referenceFilters', 'referenceLabelFormat', 'xorGroups',
   'labelOverrides', 'hideFields', 'fieldOrder', 'strictOrder', 'fieldTransforms',
   'beforeCreate', 'afterCreate', 'afterUpdate', 'useSave',
-  'readView', 'readLocals', 'updateView', 'updateLocals',
+  'readView', 'readLocals', 'updateView', 'updateLocals', 'recordLocks',
 ]);
 
 // Config keys that are intentionally NOT model names (special/fallback blocks).

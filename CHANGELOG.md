@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.161.0] - 2026-11-27
+
+### Added
+- **Pay rates from Staffology.** When payroll is run in Staffology, each linked employee now takes their pay rate from Staffology instead of the rate typed into hcs-app. People paid by the day get their day rate; everyone else gets their hourly rate. The other rates (daily, weekly, monthly, yearly) are worked out from it as before. So Job Register labour, the pay vs attendance check and attendance pay use the same rate as payroll.
+- The rate is copied when an employee is linked or their Payroll ID changes, and every hour after that (new background job `staffology-rate-sync`, part of the Payroll module).
+- **Update rates from Staffology** button on Staffology employees (`/payroll/staffology/employees`, admins). It copies every linked employee's rate straight away and says how many were checked and updated. New route `POST /payroll/staffology/employees/sync-rates`.
+
+### Changed
+- On the employee edit form, a linked employee's rate fields are read-only and marked "From Staffology", and a hand-typed rate is never saved. Unlinked employees stay editable. The employee page shows "From Staffology" next to the rates once they have been copied.
+- Only rates that differ are changed. If Staffology has no rate for someone (for example a leaver), their hcs-app rate is left alone and stays editable. A zero in Staffology never replaces a real rate.
+
 ## [6.160.0] - 2026-11-27
 
 ### Added

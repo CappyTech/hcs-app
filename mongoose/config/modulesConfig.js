@@ -90,7 +90,7 @@ export default [
     models: ['payrollRun', 'payrollSubmission', 'payrollConfig', 'payrollEntry', 'payrollTaxRates'],
     departments: ['payroll'],
     help: ['payroll'],
-    jobs: [],
+    jobs: ['staffology-rate-sync'],
   },
   {
     id: 'fleet',

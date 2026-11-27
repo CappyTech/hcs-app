@@ -160,6 +160,12 @@ router.post('/payroll/staffology/employees/link',
   authService.ensureRole('admin'),
   provider.linkEmployee
 );
+// Copy every linked employee's pay rates from Staffology (also hourly, by the
+// 'staffology-rate-sync' job). Admin only, like linking.
+router.post('/payroll/staffology/employees/sync-rates',
+  authService.ensureRole('admin'),
+  provider.syncRates
+);
 
 // ── Employee payroll settings ─────────────────────────────────────────────────
 router.get('/payroll/employee/:uuid',
