@@ -23,6 +23,14 @@ router.post("/api/sso/token", tokenLimiter, ctrl.issueTokenForSync);
 
 // Machine-to-machine: hcs-sync reads the Staffology settings (Settings →
 // Connections → Staffology) before each payroll sync. X-Sync-Api-Key only.
-router.get("/api/sync/staffology-config", tokenLimiter, ctrl.staffologyConfigForSync);
+// Its own limiter, so the hourly sync never uses up the login limit above.
+const syncConfigLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: JSON.stringify({ error: "Too many requests, try again later." }),
+});
+router.get("/api/sync/staffology-config", syncConfigLimiter, ctrl.staffologyConfigForSync);
 
 export default router;
