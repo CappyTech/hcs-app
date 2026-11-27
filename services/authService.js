@@ -35,6 +35,9 @@ const PUBLIC_PATHS = new Set([
   // it authenticates itself via the X-Sync-Api-Key header + credential check,
   // so it must bypass the session-based ensureAuthenticated guard.
   "/api/sso/token",
+  // Staffology settings for hcs-sync's payroll sync. No browser session; it
+  // authenticates with the X-Sync-Api-Key header in ssoController.
+  "/api/sync/staffology-config",
   // Paperless "Document added" webhook (migration H3). No browser session; it
   // authenticates with PAPERLESS_WEBHOOK_SECRET in paperlessWebhookController.
   "/api/paperless/webhook",

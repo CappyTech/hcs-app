@@ -21,4 +21,8 @@ router.get("/sso/hcs-sync", ctrl.hcsSyncHandoff);
 // validate credentials and receive a signed JWT without a browser redirect.
 router.post("/api/sso/token", tokenLimiter, ctrl.issueTokenForSync);
 
+// Machine-to-machine: hcs-sync reads the Staffology settings (Settings →
+// Connections → Staffology) before each payroll sync. X-Sync-Api-Key only.
+router.get("/api/sync/staffology-config", tokenLimiter, ctrl.staffologyConfigForSync);
+
 export default router;

@@ -14,6 +14,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - the Staffology employee isn't linked to an hcs-app employee
 - **Staffology employees** (`/payroll/staffology/employees`): each Staffology employee and the hcs-app employee it matches. Matching is by payroll code against the employee's Payroll ID; no NI numbers are used. Admins can link an unmatched person to a name-matched employee, which sets that Payroll ID. Refused when the code is already on someone else.
 - Recent Staffology pay on the employee's Payroll settings page, and links from the Payroll overview and a dashboard tile.
+- **Staffology settings** (Settings → Connections → Staffology): the API key (stored encrypted) and an optional employer ID, plus a Test button that checks the key against Staffology and says which employer it will use. hcs-sync reads them from the new machine endpoint `GET /api/sync/staffology-config`, which accepts only the shared `X-Sync-Api-Key` and returns `{ apiKey, employerId }` uncached. So the key is entered here once rather than in hcs-sync's environment.
 - New `STAFFOLOGY` database namespace, `MONGO_DBNAME_STAFFOLOGY` (default `staffology`), also on the setup page. Read-only here; it must match hcs-sync's `STAFFOLOGY_DB_NAME`, and the Mongo user needs read on it.
 
 ## [6.156.0] - 2026-11-27
