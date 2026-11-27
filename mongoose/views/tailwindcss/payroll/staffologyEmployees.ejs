@@ -37,7 +37,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
-          <% matches.forEach(({ payrollEmployee: pe, employee, suggestion }) => { %>
+          <% matches.forEach(({ payrollEmployee: pe, employee, suggestion, candidates = [] }) => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition align-top">
               <td class="px-4 py-3 text-gray-900 dark:text-white">
                 <span class="font-medium"><%= payrollName(pe) || '—' %></span>
@@ -58,13 +58,22 @@
                   <a href="/payroll/employee/<%= employee.uuid %>" class="ml-1 text-green-700 dark:text-green-400 hover:underline"><%= employee.name %></a>
                 <% } else if (!pe.PayrollCode) { %>
                   <span class="text-xs text-gray-500 dark:text-gray-400">Give this person a payroll code in Staffology first.</span>
-                <% } else if (suggestion && isAdmin) { %>
-                  <form method="POST" action="/payroll/staffology/employees/<%= suggestion.uuid %>/link" class="flex items-center gap-2">
+                <% } else if (isAdmin && candidates.length) { %>
+                  <form method="POST" action="/payroll/staffology/employees/link" class="flex flex-wrap items-center gap-2">
                     <%- include('../partials/csrfHidden') %>
                     <input type="hidden" name="payrollCode" value="<%= pe.PayrollCode %>">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Looks like <strong><%= suggestion.name %></strong></span>
+                    <select name="employeeUuid" required aria-label="hcs-app employee to link to <%= payrollName(pe) %>"
+                      class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-2 py-1.5 focus:ring-green-500 focus:border-green-500">
+                      <% if (!suggestion) { %><option value="" selected disabled>Choose employee…</option><% } %>
+                      <% candidates.forEach((c) => { %>
+                        <option value="<%= c.uuid %>" <%= suggestion && c.uuid === suggestion.uuid ? 'selected' : '' %>><%= c.name %><%= suggestion && c.uuid === suggestion.uuid ? ' (suggested)' : '' %><%= c.status === 'inactive' ? ' (inactive)' : '' %></option>
+                      <% }) %>
+                    </select>
                     <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Link</button>
                   </form>
+                <% } else if (isAdmin) { %>
+                  <span class="text-xs text-amber-700 dark:text-amber-400">Not linked.</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">Every hcs-app employee already has a Payroll ID. Add the employee in hcs-app first, or change a Payroll ID on the employee's Payroll page.</span>
                 <% } else if (suggestion) { %>
                   <span class="text-sm text-gray-700 dark:text-gray-300">Looks like <strong><%= suggestion.name %></strong> (an admin can link)</span>
                 <% } else { %>

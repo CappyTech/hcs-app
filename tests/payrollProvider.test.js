@@ -52,6 +52,50 @@ describe('payrollProviderService', () => {
     assert.equal(matches[2].suggestion, null);
   });
 
+  it('suggests by first name or short form when hcs-app only has a first name', () => {
+    const staff = [
+      { _id: 'a', uuid: 'ua', name: 'Dan', payroll: {} },
+      { _id: 'b', uuid: 'ub', name: 'Bev', payroll: {}, status: 'inactive' },
+      { _id: 'c', uuid: 'uc', name: 'Sam', payroll: {} },
+    ];
+    const m = matchEmployees([
+      { PayrollCode: 'X1', FirstName: 'Daniel', LastName: 'Example' },
+      { PayrollCode: 'X2', FirstName: 'Beverley', LastName: 'Example' },
+      { PayrollCode: 'X3', FirstName: 'Michael', LastName: 'Example' },
+    ], staff);
+    assert.equal(m[0].suggestion.uuid, 'ua');
+    assert.equal(m[1].suggestion.uuid, 'ub');
+    assert.equal(m[2].suggestion, null);
+    // Pick-list: suggestion first, then active before inactive.
+    assert.deepEqual(m[0].candidates.map((c) => c.uuid), ['ua', 'uc', 'ub']);
+    assert.deepEqual(m[2].candidates.map((c) => c.uuid), ['ua', 'uc', 'ub']);
+  });
+
+  it('does not suggest one employee for two Staffology people', () => {
+    const staff = [{ _id: 'a', uuid: 'ua', name: 'Sam', payroll: {} }];
+    const m = matchEmployees([
+      { PayrollCode: 'X1', FirstName: 'Samuel', LastName: 'One' },
+      { PayrollCode: 'X2', FirstName: 'Samantha', LastName: 'Two' },
+    ], staff);
+    assert.equal(m[0].suggestion, null);
+    assert.equal(m[1].suggestion, null);
+    assert.equal(m[0].candidates.length, 1);
+  });
+
+  it('ignores prefixes shorter than three letters and linked employees', () => {
+    const staff = [
+      { _id: 'a', uuid: 'ua', name: 'Al', payroll: {} },
+      { _id: 'b', uuid: 'ub', name: 'Chris', payroll: { payrollId: 'X9' } },
+    ];
+    const m = matchEmployees([
+      { PayrollCode: 'X1', FirstName: 'Alan', LastName: 'Example' },
+      { PayrollCode: 'X2', FirstName: 'Christopher', LastName: 'Example' },
+    ], staff);
+    assert.equal(m[0].suggestion, null);
+    assert.equal(m[1].suggestion, null);
+    assert.deepEqual(m[1].candidates.map((c) => c.uuid), ['ua']);
+  });
+
   it('a week paid as approved has no flags', () => {
     const res = comparePeriod({ entries: [entry()], employees, attendance: [work(E1, '2026-10-26'), work(E1, '2026-10-27')] });
     const row = res.rows[0];

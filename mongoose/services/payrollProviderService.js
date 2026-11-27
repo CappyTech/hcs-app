@@ -55,21 +55,59 @@ export function employeesByPayrollCode(employees = []) {
 }
 
 /**
- * Staffology employees with the hcs-app employee each one matches, and for the
- * unmatched ones a name-based suggestion (an employee without a payroll ID
- * whose name matches exactly, ignoring case, spaces and punctuation).
+ * Does an hcs-app name look like this Staffology person? hcs-app names are
+ * often a first name or a short form ("Dan" for Daniel), so beyond an exact
+ * full-name match, the first word of the hcs-app name may equal the Staffology
+ * first name or be a prefix of it, or the other way round (3+ letters).
+ */
+export function nameLooksLike(appName, pe) {
+  const full = normName(payrollName(pe));
+  const app = normName(appName);
+  if (!app) return false;
+  if (full && app === full) return true;
+  const first = normName(pe?.FirstName || String(pe?.EmployeeName || '').split(/\s+/)[0]);
+  const appFirst = normName(String(appName || '').trim().split(/\s+/)[0]);
+  if (!first || !appFirst) return false;
+  if (first === appFirst) return true;
+  const [short, long] = first.length <= appFirst.length ? [first, appFirst] : [appFirst, first];
+  return short.length >= 3 && long.startsWith(short);
+}
+
+const activeFirst = (a, b) =>
+  (a.status === 'inactive') - (b.status === 'inactive') || String(a.name || '').localeCompare(String(b.name || ''));
+
+/**
+ * Staffology employees with the hcs-app employee each one matches. Unmatched
+ * ones also get:
+ *  - suggestion: the one unlinked employee whose name looks like theirs, but
+ *    only when exactly one does, and that employee isn't also the likely match
+ *    for another Staffology person (an exact full-name match always wins);
+ *  - candidates: every employee without a payroll ID, suggestion first, then
+ *    active before inactive, for a pick-list.
  */
 export function matchEmployees(payrollEmployees = [], employees = []) {
   const byCode = employeesByPayrollCode(employees);
-  const unlinked = employees.filter((e) => !normCode(e?.payroll?.payrollId));
+  const unlinked = employees.filter((e) => !normCode(e?.payroll?.payrollId)).sort(activeFirst);
+
+  const pending = payrollEmployees.filter((pe) => !byCode.get(normCode(pe.PayrollCode)));
+  const guess = new Map(); // pe → employee
+  for (const pe of pending) {
+    const full = normName(payrollName(pe));
+    const exact = full ? unlinked.filter((e) => normName(e.name) === full) : [];
+    const loose = exact.length ? exact : unlinked.filter((e) => nameLooksLike(e.name, pe));
+    if (loose.length === 1) guess.set(pe, loose[0]);
+  }
+  // An employee guessed for two Staffology people is no guess at all.
+  const claims = new Map();
+  for (const e of guess.values()) claims.set(e, (claims.get(e) || 0) + 1);
+
   return payrollEmployees.map((pe) => {
     const employee = byCode.get(normCode(pe.PayrollCode)) || null;
-    let suggestion = null;
-    if (!employee) {
-      const want = normName(payrollName(pe));
-      suggestion = want ? unlinked.find((e) => normName(e.name) === want) || null : null;
-    }
-    return { payrollEmployee: pe, employee, suggestion };
+    if (employee) return { payrollEmployee: pe, employee, suggestion: null, candidates: [] };
+    const g = guess.get(pe);
+    const suggestion = g && claims.get(g) === 1 ? g : null;
+    const candidates = suggestion ? [suggestion, ...unlinked.filter((e) => e !== suggestion)] : unlinked;
+    return { payrollEmployee: pe, employee: null, suggestion, candidates };
   });
 }
 

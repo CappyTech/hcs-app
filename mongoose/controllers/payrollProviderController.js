@@ -65,6 +65,11 @@ export const linkEmployee = async (req, res, next) => {
     const Employee = mdb.INTERNAL?.employee;
     const PayrollEmployee = mdb.STAFFOLOGY?.payrollemployee;
     const code = String(req.body.payrollCode || '').trim();
+    const employeeUuid = String(req.params.uuid || req.body.employeeUuid || '').trim();
+    if (!employeeUuid) {
+      req.flash?.('error', 'Choose the hcs-app employee to link.');
+      return res.redirect(back);
+    }
     if (!Employee || !PayrollEmployee) {
       req.flash?.('error', 'Staffology data is not available.');
       return res.redirect(back);
@@ -75,9 +80,9 @@ export const linkEmployee = async (req, res, next) => {
     }
 
     const [employee, known, taken] = await Promise.all([
-      Employee.findOne({ uuid: req.params.uuid }),
+      Employee.findOne({ uuid: employeeUuid }),
       PayrollEmployee.exists({ PayrollCode: code }),
-      Employee.findOne({ 'payroll.payrollId': code, uuid: { $ne: req.params.uuid } }).select('name').lean(),
+      Employee.findOne({ 'payroll.payrollId': code, uuid: { $ne: employeeUuid } }).select('name').lean(),
     ]);
     if (!employee) {
       req.flash?.('error', 'Employee not found.');

@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.159.0] - 2026-11-27
+
+### Added
+- **Pick-list to link Staffology employees** (`/payroll/staffology/employees`, admins). Each unlinked Staffology person gets a list of the hcs-app employees without a Payroll ID: the suggested match first, then active before inactive. Pick one and press Link to set that Payroll ID. New route `POST /payroll/staffology/employees/link`, which takes the employee from the form. The existing checks still apply: the code must be in the Staffology data and must not already be on another employee.
+
+### Changed
+- **Better link suggestions.** hcs-app names are often just a first name or a short form, so a suggestion now also comes from the first name matching or being a prefix of it (3+ letters, so Dan suggests Daniel). It is only made when exactly one unlinked employee fits and that employee isn't also the likely match for someone else. An exact full-name match still wins.
+
 ## [6.158.0] - 2026-11-27
 
 ### Added
