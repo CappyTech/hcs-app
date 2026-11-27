@@ -95,6 +95,33 @@ const TESTS = {
     }
   },
 
+  // Read-only: lists the employers the key can see (GET /employers).
+  staffology: async () => {
+    const key = configService.get('STAFFOLOGY_API_KEY');
+    if (!key) throw new Error('Staffology API key not configured.');
+    const employerId = configService.get('STAFFOLOGY_EMPLOYER_ID');
+    let employers;
+    try {
+      const resp = await axios.get('https://api.staffology.co.uk/employers', {
+        auth: { username: 'hcs-app', password: key },
+        headers: { Accept: 'application/json' },
+        timeout: 10_000,
+      });
+      employers = Array.isArray(resp.data) ? resp.data : [];
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 401 || status === 403) throw new Error(`Staffology refused the API key (${status}).`);
+      throw new Error(`Staffology: ${status ? `HTTP ${status}` : err.message}`);
+    }
+    if (employerId) {
+      if (!employers.some((e) => e?.id === employerId)) throw new Error('The key works, but it cannot see the employer ID set here.');
+      return 'Staffology key works and can see the configured employer.';
+    }
+    if (employers.length === 1) return 'Staffology key works and can see one employer, which hcs-sync will use.';
+    if (!employers.length) throw new Error('The key works, but it cannot see any employer.');
+    throw new Error(`The key can see ${employers.length} employers. Set the employer ID to choose one.`);
+  },
+
   kashflow: async () => {
     const token = await kashflowSessionService.ensureSessionToken();
     if (!token) throw new Error('Could not obtain a KashFlow session token.');

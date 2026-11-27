@@ -225,6 +225,17 @@ export const GROUPS = [
     ],
   },
   {
+    id: 'staffology',
+    label: 'Staffology',
+    icon: 'bi-cash-coin',
+    description: 'Payroll run in Staffology. hcs-sync reads these settings from here (over the shared hcs-sync API key) and syncs employees and pay runs, read-only, into the staffology database for the Staffology pay page. An API key set in hcs-sync’s own environment still wins.',
+    test: 'staffology',
+    keys: [
+      { key: 'STAFFOLOGY_API_KEY', label: 'API key', type: 'secret', help: 'Create one in Staffology: profile picture → API Keys. It has the permissions of the Staffology user who created it; read access to the employer is enough. Unset turns the Staffology sync off.' },
+      { key: 'STAFFOLOGY_EMPLOYER_ID', label: 'Employer ID', type: 'text', help: 'Only needed if the key can see more than one employer. The test button says which.' },
+    ],
+  },
+  {
     id: 'kashflow',
     label: 'KashFlow',
     icon: 'bi-cash-coin',

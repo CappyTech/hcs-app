@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import totpService from '../../services/totpService.js';
 import logger from '../../services/loggerService.js';
+import configService from '../../services/configService.js';
 import mdb from '../services/mongooseDatabaseService.js';
 import encryptionService from '../../services/encryptionService.js';
 import __auditLogService from '../../services/auditLogService.js';
@@ -449,4 +450,32 @@ export const issueTokenForSync = async (req, res) => {
   return res.json({ token, expiresIn: ttlSec });
 };
 
-export default { hcsSyncHandoff, issueTokenForSync };
+/**
+ * GET /api/sync/staffology-config
+ *
+ * hcs-sync's Staffology payroll sync reads its settings from here, so the API
+ * key is entered once in Settings → Connections (stored encrypted) instead of
+ * in hcs-sync's environment. hcs-sync keeps it in memory only.
+ *
+ * Requires header:  X-Sync-Api-Key: <HCS_SYNC_API_KEY>
+ * Response (JSON):  { apiKey, employerId }  (empty strings when unset)
+ */
+export const staffologyConfigForSync = async (req, res) => {
+  const syncKey = String(configService.get("HCS_SYNC_API_KEY") || "").trim();
+  if (!syncKey) {
+    logger.error("[sso] HCS_SYNC_API_KEY not configured – /api/sync/staffology-config is disabled");
+    return res.status(503).json({ error: "Not configured" });
+  }
+  const provided = String(req.headers["x-sync-api-key"] || "");
+  if (!provided || !safeEqual(syncKey, provided)) {
+    logger.warn("[sso] /api/sync/staffology-config: invalid API key");
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  res.set("Cache-Control", "no-store");
+  return res.json({
+    apiKey: String(configService.get("STAFFOLOGY_API_KEY") || ""),
+    employerId: String(configService.get("STAFFOLOGY_EMPLOYER_ID") || ""),
+  });
+};
+
+export default { hcsSyncHandoff, issueTokenForSync, staffologyConfigForSync };
