@@ -1164,7 +1164,7 @@ const helpContent = [
           'Pay runs (/payroll/runs) lists every Staffology pay run. Open one to compare each person’s pay with their approved attendance.',
           'Link each Staffology employee to their hcs-app employee on Staffology employees (/payroll/staffology/employees), or set the Payroll ID on the employee’s payroll page.',
           'Open a payslip from a pay run or an employee’s payroll page. It is fetched from Staffology each time and not kept in hcs-app.',
-          'Linked employees take their pay rate from Staffology: the hourly rate, or the day rate for people paid by the day. It is copied when they are linked and every hour after that. An admin can press Update rates from Staffology on Staffology employees to copy it straight away.',
+          'Linked employees take their pay rate from Staffology: the hourly rate, or the day rate when Staffology has no hourly rate for them. It is copied when they are linked and every hour after that. An admin can press Update rates from Staffology on Staffology employees to copy it straight away.',
         ],
         notes: [
           'hcs-sync copies Staffology into hcs-app after each sync. Use Sync Staffology now on the sync dashboard for an immediate update.',
