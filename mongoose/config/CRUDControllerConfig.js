@@ -12,6 +12,7 @@ import { stripSubcontractorPay } from '../models/mongoose/INTERNAL/attendance.js
 import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
+import staffologyRates from '../services/staffologyRateSyncService.js';
 
 // Vehicles have no name/title field, so reference dropdowns fell back to the
 // raw ObjectId. Label them by registration, then make and model.
@@ -280,7 +281,8 @@ export default {
     }
   },
   employee: {
-    readOnly: ['uuid', 'createdAt'],
+    // Rate provenance is written only by staffologyRateSyncService.
+    readOnly: ['uuid', 'createdAt', 'payroll.rateSource', 'payroll.ratesSyncedAt'],
     useSave: true, // use findOne+save so pre-validate rate computation hooks fire on update
     validators: {
       email: value => /\S+@\S+\.\S+/.test(value),
@@ -299,6 +301,22 @@ export default {
     },
     ownershipFields: {
       employee: '_id',
+    },
+    // Staffology mode: a linked employee's rates come from Staffology
+    // (staffologyRateSyncService), so the form shows them read-only and never
+    // writes them; a hand edit would be overwritten on the next sync anyway.
+    recordLocks: async (item) => (await staffologyRates.ratesLocked(item)
+      ? { fields: staffologyRates.RATE_FIELDS, note: staffologyRates.LOCK_NOTE }
+      : { fields: [] }),
+    // A Payroll ID set or changed here is a (re-)link: take the rates now.
+    afterCreate: async (doc) => {
+      if (doc?.payroll?.payrollId) await staffologyRates.syncRates({ employeeUuid: doc.uuid });
+    },
+    afterUpdate: async (doc, req, { previous } = {}) => {
+      const code = doc?.payroll?.payrollId || null;
+      if (code && code !== (previous?.payroll?.payrollId || null)) {
+        await staffologyRates.syncRates({ employeeUuid: doc.uuid });
+      }
     },
   },
   customer: {

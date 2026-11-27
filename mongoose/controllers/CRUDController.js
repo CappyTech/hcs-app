@@ -201,6 +201,33 @@ const extractSchema = (model, config = {}) => {
   return schema;
 };
 
+// Fields locked on one particular record (config.recordLocks(item, req) →
+// { fields, note }), e.g. an employee's pay rates while they come from
+// Staffology. Best effort: a failing check locks nothing.
+export async function recordLocksFor(config, item, req) {
+  if (typeof config.recordLocks !== "function" || !item) return { fields: [], note: "" };
+  try {
+    const locks = (await config.recordLocks(item, req)) || {};
+    return { fields: Array.isArray(locks.fields) ? locks.fields : [], note: locks.note || "" };
+  } catch (err) {
+    logger.warn(`[CRUDController] recordLocks failed: ${err.message}`);
+    return { fields: [], note: "" };
+  }
+}
+
+// Show a record's locked fields read-only, labelled with the lock's note (pure).
+export function applyRecordLocks(schema, locks) {
+  for (const f of locks?.fields || []) {
+    if (!schema[f]) continue;
+    schema[f] = {
+      ...schema[f],
+      readOnly: true,
+      label: locks.note ? `${schema[f].label} (${locks.note})` : schema[f].label,
+    };
+  }
+  return schema;
+}
+
 // Pickers for these models hide retired records unless a model's own
 // referenceFilters says otherwise: leavers shouldn't be offered on new records.
 export const DEFAULT_REFERENCE_FILTERS = {
@@ -793,7 +820,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             const item = await Model.findOne({ uuid: req.params.uuid }).lean();
             if (!item) return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
 
-            const schema = extractSchema(Model, config);
+            const schema = applyRecordLocks(extractSchema(Model, config), await recordLocksFor(config, item, req));
             const referenceData = await fetchReferenceData(schema, config, { keep: item });
 
             // Allow per-model custom update view + extra locals
@@ -864,6 +891,11 @@ for (const namespace of ["REST", "INTERNAL"]) {
           for (const key of config.bodyDeny || []) delete body[key];
           // System, read-only and hidden fields are never written from a form
           const preClean = stripFields(cleanBodyForUpdate(body), lockedFields(config));
+          // Fields locked on this record (config.recordLocks) are never written either
+          if (typeof config.recordLocks === "function") {
+            const currentForLocks = await Model.findOne({ uuid: req.params.uuid }).lean();
+            stripFields(preClean, (await recordLocksFor(config, currentForLocks, req)).fields);
+          }
           const cleaned = {};
           for (const [key, val] of Object.entries(preClean)) {
             // Nested objects (e.g., contract, holidayPolicy) pass through directly
@@ -944,9 +976,9 @@ for (const namespace of ["REST", "INTERNAL"]) {
             // Re-show the form with what was typed and each problem beside its
             // field, rather than the error page (which loses the person's input).
             try {
-              const schema = extractSchema(Model, config);
-              const { errors, fieldErrors } = describeValidationError(err, schema);
               const current = await Model.findOne({ uuid: req.params.uuid }).lean();
+              const schema = applyRecordLocks(extractSchema(Model, config), await recordLocksFor(config, current, req));
+              const { errors, fieldErrors } = describeValidationError(err, schema);
               const referenceData = await fetchReferenceData(schema, config, { keep: current });
               return res
                 .status(400)

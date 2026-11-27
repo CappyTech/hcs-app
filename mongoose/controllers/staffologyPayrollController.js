@@ -11,6 +11,7 @@ import taxService from '../../services/taxService.js';
 import auditLogService from '../../services/auditLogService.js';
 import provider from '../services/payrollProviderService.js';
 import payslips from '../../services/staffologyPayslipService.js';
+import { takeRates } from './payrollProviderController.js';
 
 const view = (...p) => path.join('tailwindcss', ...p);
 
@@ -99,9 +100,12 @@ export const saveEmployeePayrollId = async (req, res, next) => {
         return res.redirect(back);
       }
     }
+    const changed = (employee.payroll?.payrollId || null) !== (code || null);
     employee.set('payroll.payrollId', code || null);
     await employee.save();
-    req.flash?.('success', code ? 'Payroll ID saved.' : 'Payroll ID cleared.');
+    // A new Payroll ID is a (re-)link: take the pay rates from Staffology now.
+    const rates = code && changed ? await takeRates(employee.uuid) : '';
+    req.flash?.('success', (code ? 'Payroll ID saved.' : 'Payroll ID cleared.') + rates);
     res.redirect(back);
   } catch (err) { next(err); }
 };

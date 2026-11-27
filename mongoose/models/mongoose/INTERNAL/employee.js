@@ -128,7 +128,13 @@ employeeSchema.add({
     pensionOptOutDate:    { type: Date, default: null },
     employeePensionRate:  { type: mongoose.Decimal128, default: null },  // % override; null → use config default
     employerPensionRate:  { type: mongoose.Decimal128, default: null },  // % override; null → use config default
-    salarySacrifice:      { type: Boolean, default: false }              // true → employee pension reduces taxable gross
+    salarySacrifice:      { type: Boolean, default: false },             // true → employee pension reduces taxable gross
+
+    // Where the pay rates last came from: 'staffology' once
+    // staffologyRateSyncService has copied them from the linked Staffology
+    // record, and when it last changed them.
+    rateSource:    { type: String, default: null },
+    ratesSyncedAt: { type: Date, default: null }
   }
 });
 
