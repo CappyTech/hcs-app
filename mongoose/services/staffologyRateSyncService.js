@@ -10,9 +10,13 @@
 // Staffology PayrollCode (same matching as payrollProviderService).
 //
 // Mapping (rateFromStaffology):
-//   PayBasis Daily  → definedRate 'daily',  dailyRate  = BaseDailyRate
-//   anything else   → definedRate 'hourly', hourlyRate = BaseHourlyRate
-// A Daily person without a day rate falls back to their hourly rate. With no
+//   BaseHourlyRate set → definedRate 'hourly', hourlyRate = BaseHourlyRate
+//   otherwise          → definedRate 'daily',  dailyRate  = BaseDailyRate
+// The hourly rate wins whatever the PayBasis, because it is what attendance
+// logged in hours is priced at (Job Register labour, pay vs attendance), and
+// the validate hook can only work an hourly rate out of a daily one when
+// contract.hoursPerWeek is set. Days paid by day rate carry their own
+// attendance dayRate, so they don't depend on the employee's dailyRate. With no
 // usable rate (none, or 0) the employee is left alone: a 0 never replaces a
 // real rate. The employee's pre('validate') hook works the other rates out
 // from the defined one, so the save goes through the Mongoose document.
@@ -58,14 +62,13 @@ const round = (n, dp) => Number(n.toFixed(dp));
  */
 export function rateFromStaffology(pe) {
   if (!pe) return null;
-  const basis = String(pe.PayBasis || '').trim().toLowerCase();
   const daily = positive(pe.BaseDailyRate);
   const hourly = positive(pe.BaseHourlyRate);
-  if (basis === 'daily' && daily != null) {
-    return { definedRate: 'daily', field: 'dailyRate', value: round(daily, DECIMALS.dailyRate) };
-  }
   if (hourly != null) {
     return { definedRate: 'hourly', field: 'hourlyRate', value: round(hourly, DECIMALS.hourlyRate) };
+  }
+  if (daily != null) {
+    return { definedRate: 'daily', field: 'dailyRate', value: round(daily, DECIMALS.dailyRate) };
   }
   return null;
 }

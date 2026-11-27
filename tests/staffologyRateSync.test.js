@@ -18,12 +18,12 @@ describe('staffologyRateSyncService: mapping', () => {
     assert.deepEqual(rateFromStaffology(pe({ BaseHourlyRate: 12.5 })), { definedRate: 'hourly', field: 'hourlyRate', value: 12.5 });
   });
 
-  it('Daily basis → defined daily at BaseDailyRate', () => {
-    assert.deepEqual(rateFromStaffology(pe({ PayBasis: 'Daily', BaseDailyRate: 140, BaseHourlyRate: 17.5 })), { definedRate: 'daily', field: 'dailyRate', value: 140 });
+  it('the hourly rate wins even on a Daily basis', () => {
+    assert.deepEqual(rateFromStaffology(pe({ PayBasis: 'Daily', BaseDailyRate: 140, BaseHourlyRate: 17.5 })), { definedRate: 'hourly', field: 'hourlyRate', value: 17.5 });
   });
 
-  it('Daily basis with no day rate falls back to the hourly rate', () => {
-    assert.equal(rateFromStaffology(pe({ PayBasis: 'Daily', BaseHourlyRate: 18 })).definedRate, 'hourly');
+  it('with no hourly rate → defined daily at BaseDailyRate', () => {
+    assert.deepEqual(rateFromStaffology(pe({ PayBasis: 'Daily', BaseDailyRate: 140 })), { definedRate: 'daily', field: 'dailyRate', value: 140 });
   });
 
   it('Monthly (or any other) basis → defined hourly when there is an hourly rate', () => {
