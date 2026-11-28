@@ -277,6 +277,10 @@
     const _cfg = typeof config !== 'undefined' ? config : {};
     let refLink = null;
     let resolvedArrayItems = null;
+    // A reference whose record was deleted: say so, never print the id's raw bytes.
+    const MISSING_REF = 'Not found (deleted)';
+    let missingRef = false;
+    let resolvedRef = false;
 
     if (field.ref && typeof referenceData !== 'undefined' && Array.isArray(referenceData[key])) {
       const findMatch = (v) => referenceData[key].find(r =>
@@ -300,7 +304,7 @@
       if (Array.isArray(value) && value.length > 0) {
         resolvedArrayItems = value.map(v => {
           const matched = findMatch(v);
-          if (!matched) return { name: String(v), link: null };
+          if (!matched) return { name: MISSING_REF, link: null };
           return { name: getLabel(matched), link: getLink(matched) };
         });
         displayValue = resolvedArrayItems.map(i => i.name).join(', ');
@@ -309,8 +313,16 @@
         if (matched) {
           displayValue = getLabel(matched);
           refLink = getLink(matched);
+          resolvedRef = true;
+        } else {
+          displayValue = MISSING_REF;
+          missingRef = true;
         }
       }
+    } else if (field.ref && value && typeof value === 'object' && value._bsontype === 'ObjectId') {
+      // No reference data to resolve it against: show the id, not its bytes.
+      displayValue = String(value);
+      missingRef = true;
     }
 
     // If value is empty, do not render this field at all
@@ -326,6 +338,10 @@
           <% }) %>
         <% } else if (refLink) { %>
           <a href="<%= refLink %>" class="text-green-700 dark:text-green-400 hover:underline"><%= displayValue %></a>
+        <% } else if (resolvedRef) { %>
+          <%= displayValue %>
+        <% } else if (missingRef) { %>
+          <span class="text-gray-500 dark:text-gray-400 italic"><%= displayValue %></span>
         <% } else if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) { %>
           <dl class="space-y-0.5">
             <% Object.entries(value).forEach(([k, v]) => { if (v === null || v === undefined || v === '') return; %>
