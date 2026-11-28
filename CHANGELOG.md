@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.161.1] - 2026-11-28
+
+### Fixed
+- Read-only reference fields (such as an attendance day's Location) no longer show the record id's raw bytes. A reference to a deleted record now reads "Not found (deleted)", and a reference that does resolve shows its name even when the field has no link.
+
 ## [6.161.0] - 2026-11-27
 
 ### Added
